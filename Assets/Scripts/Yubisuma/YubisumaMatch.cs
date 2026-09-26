@@ -18,7 +18,8 @@ using UnityEngine.InputSystem;
 /// ## スキル
 ///
 ///   ・試合の始めに、全員に**ランダムで1つ**配る
-///   ・**自分の番で、スペースを押す前に**スキルのキー（1P：W ／ 2P：↑）で使う。**1回使うと無くなる**
+///   ・**自分の番で、スペースを押す前に**スキルのキー（1P：W ／ 2P：↑）で選ぶ（画面には出さない）。
+///     「いっせーの ＜数字＞！」の代わりに「いっせーの ＜スキル名＞！」と出て使われ、**無くなる**
 ///   ・誰かが**当てたとき、当てていない側**はランダムで1つもらえる（**使わずに持っていたら、もらえない**）
 ///   ・使わなかったスキルは、次のゲームへ持ち越す
 ///   ・効果は <see cref="YubisumaSkillType"/> を読むこと。
@@ -235,8 +236,11 @@ public class YubisumaMatch : MonoBehaviour
     }
 
     /// <summary>
-    /// スキルのキーを読む。**番のプレイヤーだけが、スペースを押す前に使える。**
-    /// 1回の番で使えるのは1つだけ。使ったスキルは無くなる。
+    /// スキルのキーを読む。**番のプレイヤーだけが、スペースを押す前に選べる。**
+    ///
+    /// 選んでも画面には何も出さない（相手にばれないように）。
+    /// 「いっせーの ＜数字＞！」の代わりに「いっせーの ＜スキル名＞！」と出た瞬間に使われ、無くなる。
+    /// もう一度同じキーを押すと、選んだのを取り消せる。
     /// </summary>
     private void ReadSkillKeys(Keyboard keyboard)
     {
@@ -255,18 +259,17 @@ public class YubisumaMatch : MonoBehaviour
                 continue;
             }
 
-            if (activeSkill != YubisumaSkillType.None || player.HeldSkill == YubisumaSkillType.None)
+            if (player.HeldSkill == YubisumaSkillType.None)
             {
                 continue;
             }
 
-            activeSkill = player.HeldSkill;
-            player.HeldSkill = YubisumaSkillType.None;
+            // 選ぶ／取り消す。まだ持ったまま（「いっせーの ＜スキル名＞！」の瞬間に無くなる）
+            activeSkill = activeSkill == YubisumaSkillType.None ? player.HeldSkill : YubisumaSkillType.None;
 
-            subMessage = $"{player.DisplayName} がスキル「{YubisumaSkill.NameOf(activeSkill)}」を使った！\n" +
-                         YubisumaSkill.DescriptionOf(activeSkill);
-
-            Debug.Log($"[指スマ] {player.DisplayName} がスキル「{YubisumaSkill.NameOf(activeSkill)}」を使った");
+            Debug.Log(activeSkill == YubisumaSkillType.None
+                ? $"[指スマ] {player.DisplayName} がスキルを選ぶのをやめた"
+                : $"[指スマ] {player.DisplayName} がスキル「{YubisumaSkill.NameOf(activeSkill)}」を選んだ");
         }
     }
 
@@ -296,9 +299,7 @@ public class YubisumaMatch : MonoBehaviour
         YubisumaPlayer caller = CurrentPlayer;
 
         bigMessage = "いっせーの";
-        subMessage = activeSkill == YubisumaSkillType.None
-            ? string.Empty
-            : $"スキル「{YubisumaSkill.NameOf(activeSkill)}」";
+        subMessage = string.Empty;
         PlayVoice(isseenoVoice);
 
         // 「いっせーの」の間は、全員の手を握りこぶしに戻す。
@@ -307,19 +308,35 @@ public class YubisumaMatch : MonoBehaviour
 
         yield return new WaitForSeconds(callDelaySeconds);
 
-        // 「せ！」の代わりに、番のプレイヤーが指定していた数字を出す（例：いっせーの 2！）
-        bigMessage = $"いっせーの {calledNumber}！";
-        PlayVoice(calledNumber < numberVoices.Length ? numberVoices[calledNumber] : null);
+        // 選んでいたスキルは、この瞬間に使われて無くなる
+        YubisumaSkillType skill = activeSkill;
+        activeSkill = YubisumaSkillType.None;
+
+        if (skill != YubisumaSkillType.None)
+        {
+            caller.HeldSkill = YubisumaSkillType.None;
+        }
+
+        // 「せ！」の代わりに、番のプレイヤーが指定していた数字を出す（例：いっせーの 2！）。
+        // スキルを選んでいたら、数字の代わりにスキル名を出す（例：いっせーの コンクリ！）。
+        // スキル名の声はまだ無いので、そのときは声を鳴らさない
+        if (skill == YubisumaSkillType.None)
+        {
+            bigMessage = $"いっせーの {calledNumber}！";
+            PlayVoice(calledNumber < numberVoices.Length ? numberVoices[calledNumber] : null);
+        }
+        else
+        {
+            bigMessage = $"いっせーの {YubisumaSkill.NameOf(skill)}！";
+        }
 
         // ★この瞬間にキーを押している手だけ、一斉に指を立てる。結果を出している間はその形で止める
         ForEachPlayer(player => player.RevealHands());
 
-        // ★数字を出した瞬間に上がっている本数で決める（見えている指の本数と同じ）
+        // ★数字（スキル名）を出した瞬間に上がっている本数で決める（見えている指の本数と同じ）
         int total = CountRaised();
 
         // 当たりかどうか。イーブン・オッズを使っていれば偶数／奇数で決まる
-        YubisumaSkillType skill = activeSkill;
-        activeSkill = YubisumaSkillType.None;
         bool hit = YubisumaSkill.IsHit(skill, total, calledNumber);
 
         // ピース（2）・サンダー（3）で当てたら、そのゲームにすぐ勝つ
@@ -328,7 +345,21 @@ public class YubisumaMatch : MonoBehaviour
         Debug.Log($"[指スマ] {caller.DisplayName} の番：指定 {calledNumber} ／ 上がっていた本数 {total} ／ スキル {YubisumaSkill.NameOf(skill)} → {(hit ? "当たり" : "はずれ")}{(winsGame ? "（ゲームに勝ち）" : string.Empty)}");
 
         System.Text.StringBuilder result = new System.Text.StringBuilder();
+
+        // スキル名を出したときは数字が見えないので、宣言した数字も添える
+        // （イーブン・オッズは数字を使わないので添えない）
+        if (skill != YubisumaSkillType.None &&
+            skill != YubisumaSkillType.Even && skill != YubisumaSkillType.Odds)
+        {
+            result.Append($"宣言 {calledNumber} → ");
+        }
+
         result.Append(hit ? $"{total}本！ {caller.DisplayName} 当たり！" : $"{total}本… はずれ");
+
+        if (skill != YubisumaSkillType.None)
+        {
+            result.Append($"\n{YubisumaSkill.NameOf(skill)}：{YubisumaSkill.DescriptionOf(skill)}");
+        }
 
         if (winsGame)
         {
@@ -516,9 +547,8 @@ public class YubisumaMatch : MonoBehaviour
         // 上に出すと、各プレイヤーの名前の表示と重なるため
         if (phase == Phase.WaitingCall || phase == Phase.Calling)
         {
-            // スキルを持っていて、まだ使っていなければ、使うキーも案内する
+            // スキルを持っていれば、使うキーも案内する（選んだかどうかで変えない。相手にばれないように）
             string skillHint = phase == Phase.WaitingCall &&
-                               activeSkill == YubisumaSkillType.None &&
                                CurrentPlayer.HeldSkill != YubisumaSkillType.None
                 ? $" ／ スキルは {CurrentPlayer.SkillKeyName}"
                 : string.Empty;
