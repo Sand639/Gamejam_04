@@ -2,10 +2,20 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// **親指1本分。キーを押すと上がり、離すと下がる。**
+/// **手1つ分の「上げる指」。キーを押すと上がり、離すと下がる。**
 ///
-/// 親指の付け根（このオブジェクト）を回して、上げ下げを見せる。
-/// 子に親指の見た目を置いておくこと。
+/// 手のプレハブ（`Assets/Prefab/LeftHand` ／ `RightHand`）の一番上に付ける。
+/// 見た目は手のアニメーションで切り替える。
+///
+///   ・下げている … 握りこぶし（Hand_Idle）
+///   ・上げている … 中指を立てる（Hand_Fuck）
+///
+/// Animator の Bool パラメーター（初期値 `Raised`）を切り替えるだけなので、
+/// ポーズを変えたいときはアニメーションを差し替えればよい。
+///
+/// **「キーを押しているか」と「見た目」は分けて持つ。**
+/// 「いっせーの」の間は <see cref="Hide"/> で見た目を握りこぶしにしておき、
+/// 「いっせーの ＜数字＞！」の瞬間に <see cref="Reveal"/> で一斉に指を立てる。
 ///
 /// 上げ方は2通りから選べる。
 ///   ・Hold   … 押している間だけ上がる（指スマの実際の動きに近い）
@@ -23,28 +33,29 @@ public class YubisumaThumb : MonoBehaviour
     }
 
     [Header("操作")]
-    [Tooltip("この親指を上げるキー")]
+    [Tooltip("この指を上げるキー")]
     [SerializeField] private Key key = Key.A;
 
     [Tooltip("Hold：押している間だけ上がる ／ Toggle：押すたびに切り替わる")]
     [SerializeField] private RaiseMode mode = RaiseMode.Hold;
 
-    [Header("見た目")]
-    [Tooltip("下げているときの傾き（度）。手の内側へ倒す。左手はマイナス、右手はプラス")]
-    [SerializeField] private float loweredAngle = -80f;
+    [Header("アニメーション")]
+    [Tooltip("手の Animator。空なら、この手の中から自動で探す")]
+    [SerializeField] private Animator animator;
 
-    [Tooltip("上げ下げの速さ。大きいほどすばやく動く")]
-    [Range(1f, 60f)]
-    [SerializeField] private float turnSpeed = 25f;
-
-    [Tooltip("親指の見た目。上げているときに色を変える")]
-    [SerializeField] private Renderer thumbRenderer;
-
-    [SerializeField] private Color loweredColor = new Color(0.95f, 0.78f, 0.62f);
-    [SerializeField] private Color raisedColor = new Color(1f, 0.85f, 0.2f);
+    [Tooltip("上げているかを伝える Animator の Bool パラメーターの名前")]
+    [SerializeField] private string raisedParameter = "Raised";
 
     /// <summary>いま上げているか。</summary>
     public bool IsRaised { get; private set; }
+
+    /// <summary>
+    /// 当てられて取り除かれたか。取り除かれた手は、キーを押しても動かず、本数にも数えない。
+    /// </summary>
+    public bool IsRemoved { get; private set; }
+
+    /// <summary>この指が付いている手（手ごと動かすときに使う）。</summary>
+    public Transform Hand => transform;
 
     /// <summary>画面の案内に出すキーの名前。</summary>
     public string KeyName
@@ -62,25 +73,108 @@ public class YubisumaThumb : MonoBehaviour
         }
     }
 
-    private void Start()
+    /// <summary>見た目（アニメーション）をどう出すか。</summary>
+    public enum DisplayMode
     {
-        ApplyColor();
-        transform.localRotation = TargetRotation();
+        /// <summary>キーに合わせてすぐ動く（ふだん）</summary>
+        Live,
+
+        /// <summary>キーを押していても握りこぶしのまま（「いっせーの」の間）</summary>
+        Hidden,
+
+        /// <summary><see cref="Reveal"/> した瞬間の形のまま止める（結果を出している間）</summary>
+        Frozen,
+    }
+
+    /// <summary>いまの見た目の出し方。</summary>
+    public DisplayMode Display { get; private set; } = DisplayMode.Live;
+
+    private int raisedHash;
+    private bool frozenRaised;
+
+    /// <summary>
+    /// この手を取り除く。以後は入力を受けず、本数にも数えない。
+    /// **見た目はそのまま残す**（立てた指のまま画面の外へ流れていくように）。
+    /// </summary>
+    public void Remove()
+    {
+        IsRemoved = true;
+    }
+
+    /// <summary>
+    /// 見た目を握りこぶしに戻し、キーを押しても指を立てないようにする（「いっせーの」の始まり）。
+    /// **キーを押しているかどうかは、見た目と関係なく覚えている。**
+    /// </summary>
+    public void Hide()
+    {
+        Display = DisplayMode.Hidden;
+        ApplyAnimation();
+    }
+
+    /// <summary>
+    /// いまキーを押していれば指を立て、**その形のまま止める**（「いっせーの ＜数字＞！」の瞬間）。
+    /// 全員に同時に呼べば、指が一斉に立つ。
+    /// </summary>
+    public void Reveal()
+    {
+        frozenRaised = IsRaised;
+        Display = DisplayMode.Frozen;
+        ApplyAnimation();
+    }
+
+    /// <summary>ふだんの動き（キーに合わせてすぐ動く）に戻す。</summary>
+    public void ShowLive()
+    {
+        Display = DisplayMode.Live;
+        ApplyAnimation();
+    }
+
+    private void Awake()
+    {
+        if (animator == null)
+        {
+            animator = GetComponentInChildren<Animator>();
+        }
+
+        raisedHash = Animator.StringToHash(raisedParameter);
     }
 
     private void Update()
     {
+        if (IsRemoved)
+        {
+            return;
+        }
+
         bool wasRaised = IsRaised;
         IsRaised = ReadRaised();
 
-        if (wasRaised != IsRaised)
+        if (wasRaised != IsRaised && Display == DisplayMode.Live)
         {
-            ApplyColor();
+            ApplyAnimation();
         }
+    }
 
-        // 目標の角度へなめらかに近づける（パッと切り替わるより、上げたことが分かりやすい）
-        transform.localRotation = Quaternion.Slerp(
-            transform.localRotation, TargetRotation(), 1f - Mathf.Exp(-turnSpeed * Time.deltaTime));
+    /// <summary>見た目として指を立てているか（画面の本数の表示に使う）。</summary>
+    public bool IsShownRaised
+    {
+        get
+        {
+            switch (Display)
+            {
+                case DisplayMode.Hidden: return false;
+                case DisplayMode.Frozen: return frozenRaised;
+                default: return IsRaised;
+            }
+        }
+    }
+
+    private void ApplyAnimation()
+    {
+        if (animator != null && animator.runtimeAnimatorController != null)
+        {
+            animator.SetBool(raisedHash, IsShownRaised);
+        }
     }
 
     private bool ReadRaised()
@@ -97,18 +191,5 @@ public class YubisumaThumb : MonoBehaviour
         return mode == RaiseMode.Hold
             ? control.isPressed
             : control.wasPressedThisFrame ? !IsRaised : IsRaised;
-    }
-
-    private Quaternion TargetRotation()
-    {
-        return Quaternion.Euler(0f, 0f, IsRaised ? 0f : loweredAngle);
-    }
-
-    private void ApplyColor()
-    {
-        if (thumbRenderer != null)
-        {
-            thumbRenderer.material.color = IsRaised ? raisedColor : loweredColor;
-        }
     }
 }
