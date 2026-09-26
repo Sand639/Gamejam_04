@@ -23,7 +23,7 @@ using UnityEngine.InputSystem;
 ///   ・誰かが**当てたとき、当てていない側**はランダムで1つもらえる（**使わずに持っていたら、もらえない**）
 ///   ・使わなかったスキルは、次のゲームへ持ち越す
 ///   ・効果は <see cref="YubisumaSkillType"/> を読むこと。
-///     コンクリ／セメントは「いっせーの ＜数字＞！」の瞬間の相手の指を固定し、**自分の次の番が来たら外す**
+///     コンクリ／セメントは「いっせーの ＜数字＞！」の瞬間の相手の指を固定し、**自分の次の番が終わったら外す**
 /// </summary>
 public class YubisumaMatch : MonoBehaviour
 {
@@ -112,11 +112,24 @@ public class YubisumaMatch : MonoBehaviour
     /// <summary>この番で、番のプレイヤーが使ったスキル。使っていなければ None。</summary>
     private YubisumaSkillType activeSkill = YubisumaSkillType.None;
 
+    /// <summary>コンクリ／セメントの固定が、いまどの段階か（プレイヤーごと）。</summary>
+    private enum LockStage
+    {
+        /// <summary>固定をかけていない</summary>
+        None,
+
+        /// <summary>固定をかけた。次の自分の番を待っている（相手の番の間も固定は続く）</summary>
+        Placed,
+
+        /// <summary>固定をかけた人の次の番の最中。**この番が終わったら外す**</summary>
+        OwnerTurn,
+    }
+
     /// <summary>
     /// プレイヤーごとに、コンクリ／セメントで**相手の指を固定しているか**。
-    /// そのプレイヤーの次の番が来たら外す。
+    /// **かけた人の次の番が終わるまで**続き、終わったら外す。
     /// </summary>
-    private bool[] placedLock = new bool[0];
+    private LockStage[] placedLock = new LockStage[0];
 
     private string bigMessage = string.Empty;
     private string subMessage = string.Empty;
@@ -131,7 +144,7 @@ public class YubisumaMatch : MonoBehaviour
     {
         PrepareVoices();
         wins = new int[players.Length];
-        placedLock = new bool[players.Length];
+        placedLock = new LockStage[players.Length];
 
         // スキルを1つずつ配る
         for (int i = 0; i < players.Length; i++)
@@ -425,11 +438,14 @@ public class YubisumaMatch : MonoBehaviour
             result.Append($"\n{YubisumaSkill.NameOf(skill)}成功！ このゲームは {caller.DisplayName} の勝ち");
         }
 
-        // コンクリ／セメント：この瞬間の相手の指を固定する（自分の次の番が来たら外す）
+        // コンクリ／セメント：この瞬間の相手の指を固定する（自分の次の番が終わったら外す）
         if (skill == YubisumaSkillType.Concrete || skill == YubisumaSkillType.Cement)
         {
             bool lockRaised = skill == YubisumaSkillType.Cement;
             int locked = 0;
+
+            // 前にかけた固定がまだ残っていれば、新しい固定に置き換える
+            ReleaseLocksPlacedBy(turnIndex);
 
             for (int i = 0; i < players.Length; i++)
             {
@@ -439,7 +455,7 @@ public class YubisumaMatch : MonoBehaviour
                 }
             }
 
-            placedLock[turnIndex] = true;
+            placedLock[turnIndex] = LockStage.Placed;
             result.Append($"\n{YubisumaSkill.NameOf(skill)}：相手の{(lockRaised ? "上がっている" : "下がっている")}指 {locked}本を固定");
         }
 
@@ -489,21 +505,19 @@ public class YubisumaMatch : MonoBehaviour
             yield break;
         }
 
+        // この人が前の番でかけていた固定（コンクリ／セメント）は、この番が終わったので外す
+        if (placedLock[turnIndex] == LockStage.OwnerTurn)
+        {
+            ReleaseLocksPlacedBy(turnIndex);
+        }
+
         // 当たってもはずれても、いっせーのごとに番を交代する
         turnIndex = (turnIndex + 1) % players.Length;
 
-        // その人がかけていた固定（コンクリ／セメント）は、その人の番が来たら外す
-        if (placedLock[turnIndex])
+        // この人がかけた固定は、この番の間も続ける（この番が終わったら外す）
+        if (placedLock[turnIndex] == LockStage.Placed)
         {
-            for (int i = 0; i < players.Length; i++)
-            {
-                if (i != turnIndex)
-                {
-                    players[i].UnlockHands();
-                }
-            }
-
-            placedLock[turnIndex] = false;
+            placedLock[turnIndex] = LockStage.OwnerTurn;
         }
 
         // 手の見た目を、ふだんの動き（キーに合わせてすぐ動く）に戻す
@@ -550,6 +564,26 @@ public class YubisumaMatch : MonoBehaviour
         voiceSource.Stop();
         voiceSource.clip = clip;
         voiceSource.Play();
+    }
+
+    /// <summary><paramref name="owner"/> がかけていたコンクリ／セメントの固定を外す。</summary>
+    private void ReleaseLocksPlacedBy(int owner)
+    {
+        if (placedLock[owner] == LockStage.None)
+        {
+            return;
+        }
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            if (i != owner)
+            {
+                players[i].UnlockHands();
+            }
+        }
+
+        placedLock[owner] = LockStage.None;
+        Debug.Log($"[指スマ] {players[owner].DisplayName} がかけていた固定を外した");
     }
 
     private void ForEachPlayer(System.Action<YubisumaPlayer> action)
