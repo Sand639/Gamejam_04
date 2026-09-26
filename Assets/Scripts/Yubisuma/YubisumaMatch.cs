@@ -240,7 +240,7 @@ public class YubisumaMatch : MonoBehaviour
     ///
     /// 選んでも画面には何も出さない（相手にばれないように）。
     /// 「いっせーの ＜数字＞！」の代わりに「いっせーの ＜スキル名＞！」と出た瞬間に使われ、無くなる。
-    /// もう一度同じキーを押すと、選んだのを取り消せる。
+    /// 選んだあとに**数字キーが押されたら取り消す**（その番は数字で宣言する）。スキルのキーを押し直しても選んだまま。
     /// </summary>
     private void ReadSkillKeys(Keyboard keyboard)
     {
@@ -259,17 +259,15 @@ public class YubisumaMatch : MonoBehaviour
                 continue;
             }
 
-            if (player.HeldSkill == YubisumaSkillType.None)
+            if (player.HeldSkill == YubisumaSkillType.None || activeSkill != YubisumaSkillType.None)
             {
                 continue;
             }
 
-            // 選ぶ／取り消す。まだ持ったまま（「いっせーの ＜スキル名＞！」の瞬間に無くなる）
-            activeSkill = activeSkill == YubisumaSkillType.None ? player.HeldSkill : YubisumaSkillType.None;
-
-            Debug.Log(activeSkill == YubisumaSkillType.None
-                ? $"[指スマ] {player.DisplayName} がスキルを選ぶのをやめた"
-                : $"[指スマ] {player.DisplayName} がスキル「{YubisumaSkill.NameOf(activeSkill)}」を選んだ");
+            // 選ぶ。まだ持ったまま（「いっせーの ＜スキル名＞！」の瞬間に無くなる）。
+            // 取り消しは、このあと数字キーが押されたとき（ReadNumberKeys）
+            activeSkill = player.HeldSkill;
+            Debug.Log($"[指スマ] {player.DisplayName} がスキル「{YubisumaSkill.NameOf(activeSkill)}」を選んだ");
         }
     }
 
@@ -289,6 +287,13 @@ public class YubisumaMatch : MonoBehaviour
             {
                 calledNumber = digit <= MaxCall ? digit : 0;
                 Debug.Log($"[指スマ] 指定：{calledNumber}（押したキー：{digit}）");
+
+                // スキルを選んだあとに数字が押されたら、スキルは取り消す（その番は数字で宣言する）
+                if (activeSkill != YubisumaSkillType.None)
+                {
+                    Debug.Log($"[指スマ] 数字が押されたので、スキル「{YubisumaSkill.NameOf(activeSkill)}」を取り消した");
+                    activeSkill = YubisumaSkillType.None;
+                }
             }
         }
     }

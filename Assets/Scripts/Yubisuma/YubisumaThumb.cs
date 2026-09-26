@@ -123,6 +123,7 @@ public class YubisumaThumb : MonoBehaviour
     /// <summary>
     /// 見た目を握りこぶしに戻し、キーを押しても指を立てないようにする（「いっせーの」の始まり）。
     /// **キーを押しているかどうかは、見た目と関係なく覚えている。**
+    /// スキルで**固定されている指は戻さない**（上げたまま固定されていれば、立ったまま）。
     /// </summary>
     public void Hide()
     {
@@ -210,7 +211,9 @@ public class YubisumaThumb : MonoBehaviour
         {
             switch (Display)
             {
-                case DisplayMode.Hidden: return false;
+                // 「いっせーの」の間は握りこぶしにする。
+                // ただしスキルで固定されている指は、固定された形のまま見せる（隠すものが無いため）
+                case DisplayMode.Hidden: return IsLocked && LockedRaised;
                 case DisplayMode.Frozen: return frozenRaised;
                 default: return IsRaised;
             }
