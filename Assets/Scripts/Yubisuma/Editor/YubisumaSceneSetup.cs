@@ -13,13 +13,13 @@ using UnityEngine.InputSystem;
 /// ・画面を左右に2分割（左がプレイヤー1、右がプレイヤー2）
 /// ・プレイヤーごとに両手を置く。手は `Assets/Prefab/LeftHand` ／ `RightHand` のプレハブ
 /// ・キーは合計4つ
-///     プレイヤー1 … 左手 A ／ 右手 D
-///     プレイヤー2 … 左手 ← ／ 右手 →
+///     プレイヤー1 … 画面の左の手 A ／ 右の手 D
+///     プレイヤー2 … 画面の左の手 ← ／ 右の手 →
 /// ・押している間、中指が立つ（Hand_Fuck のアニメーション）
 ///
 /// 2人の手は**離れた場所に置き、それぞれ専用のカメラで映す**。
 /// カメラの Viewport Rect で、画面の左半分・右半分に割り当てている。
-/// **カメラは手の後ろから映す**（自分の手を見ている向き。左に左手、右に右手が出る）。
+/// **カメラは手の後ろから映す**。手は左右を入れ替えて置き、**画面の左に右手、右に左手**が出る。
 ///
 /// ※ Editor フォルダにあるため、ゲームのビルドには含まれない。
 /// </summary>
@@ -195,9 +195,12 @@ public static class YubisumaSceneSetup
             cameraObject.AddComponent<AudioListener>();
         }
 
-        // -Z 方向を見ているので、+X が画面の左になる。左手を +X、右手を -X に置く
-        YubisumaThumb leftThumb = CreateHand(root.transform, leftPrefab, HandHalfSpacing, leftKey, handController);
-        YubisumaThumb rightThumb = CreateHand(root.transform, rightPrefab, -HandHalfSpacing, rightKey, handController);
+        // -Z 方向を見ているので、+X が画面の左になる。
+        // 手は左右を入れ替えて置く：**右手のプレハブを画面の左（+X）、左手のプレハブを画面の右（-X）**。
+        // キーは画面の並びに合わせる（画面の左の手が A／←、右の手が D／→）。
+        // leftThumb／rightThumb は「画面の左／右にある手」の意味
+        YubisumaThumb leftThumb = CreateHand(root.transform, rightPrefab, HandHalfSpacing, leftKey, handController);
+        YubisumaThumb rightThumb = CreateHand(root.transform, leftPrefab, -HandHalfSpacing, rightKey, handController);
 
         YubisumaPlayer player = root.AddComponent<YubisumaPlayer>();
         SerializedObject serialized = new SerializedObject(player);
