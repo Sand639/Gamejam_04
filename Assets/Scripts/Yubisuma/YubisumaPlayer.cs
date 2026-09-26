@@ -31,7 +31,7 @@ public class YubisumaPlayer : MonoBehaviour
 
             foreach (YubisumaThumb thumb in thumbs)
             {
-                if (thumb != null && thumb.IsRaised)
+                if (IsAlive(thumb) && thumb.IsRaised)
                 {
                     count++;
                 }
@@ -39,5 +39,47 @@ public class YubisumaPlayer : MonoBehaviour
 
             return count;
         }
+    }
+
+    /// <summary>まだ残っている手の数。0になったら、このプレイヤーの勝ち。</summary>
+    public int RemainingHands
+    {
+        get
+        {
+            int count = 0;
+
+            foreach (YubisumaThumb thumb in thumbs)
+            {
+                if (IsAlive(thumb))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+    }
+
+    /// <summary>
+    /// 手を1つ取り除く（当てたときに呼ぶ）。**右手から先に**取り除く。
+    /// 取り除いた親指を返す。もう手が無ければ null。
+    /// </summary>
+    public YubisumaThumb RemoveOneHand()
+    {
+        for (int i = thumbs.Length - 1; i >= 0; i--)
+        {
+            if (IsAlive(thumbs[i]))
+            {
+                thumbs[i].Remove();
+                return thumbs[i];
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsAlive(YubisumaThumb thumb)
+    {
+        return thumb != null && !thumb.IsRemoved;
     }
 }
