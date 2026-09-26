@@ -69,4 +69,12 @@
 
 ## メンバー
 
-大槻 海斗 ／ sakrai33 ／ UesugiNaoki ／ TakumaS7 ／ iwasi-dev
+- [Sand639](https://github.com/Sand639)（大槻 海斗）
+- [460tk](https://github.com/460tk)
+- [Blacky-1112](https://github.com/Blacky-1112)
+- [HAL-Kubodera](https://github.com/HAL-Kubodera)
+- [iwasi-tech](https://github.com/iwasi-tech)
+- [MaKi2024](https://github.com/MaKi2024)
+- [sakurai33](https://github.com/sakurai33)
+- [TakumaS7](https://github.com/TakumaS7)
+- [UesugiNaoki](https://github.com/UesugiNaoki)
