@@ -2,10 +2,16 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// **親指1本分。キーを押すと上がり、離すと下がる。**
+/// **手1つ分の「上げる指」。キーを押すと上がり、離すと下がる。**
 ///
-/// 親指の付け根（このオブジェクト）を回して、上げ下げを見せる。
-/// 子に親指の見た目を置いておくこと。
+/// 手のプレハブ（`Assets/Prefab/LeftHand` ／ `RightHand`）の一番上に付ける。
+/// 見た目は手のアニメーションで切り替える。
+///
+///   ・下げている … 握りこぶし（Hand_Idle）
+///   ・上げている … 中指を立てる（Hand_Fuck）
+///
+/// Animator の Bool パラメーター（初期値 `Raised`）を切り替えるだけなので、
+/// ポーズを変えたいときはアニメーションを差し替えればよい。
 ///
 /// 上げ方は2通りから選べる。
 ///   ・Hold   … 押している間だけ上がる（指スマの実際の動きに近い）
@@ -23,25 +29,18 @@ public class YubisumaThumb : MonoBehaviour
     }
 
     [Header("操作")]
-    [Tooltip("この親指を上げるキー")]
+    [Tooltip("この指を上げるキー")]
     [SerializeField] private Key key = Key.A;
 
     [Tooltip("Hold：押している間だけ上がる ／ Toggle：押すたびに切り替わる")]
     [SerializeField] private RaiseMode mode = RaiseMode.Hold;
 
-    [Header("見た目")]
-    [Tooltip("下げているときの傾き（度）。手の内側へ倒す。左手はマイナス、右手はプラス")]
-    [SerializeField] private float loweredAngle = -80f;
+    [Header("アニメーション")]
+    [Tooltip("手の Animator。空なら、この手の中から自動で探す")]
+    [SerializeField] private Animator animator;
 
-    [Tooltip("上げ下げの速さ。大きいほどすばやく動く")]
-    [Range(1f, 60f)]
-    [SerializeField] private float turnSpeed = 25f;
-
-    [Tooltip("親指の見た目。上げているときに色を変える")]
-    [SerializeField] private Renderer thumbRenderer;
-
-    [SerializeField] private Color loweredColor = new Color(0.95f, 0.78f, 0.62f);
-    [SerializeField] private Color raisedColor = new Color(1f, 0.85f, 0.2f);
+    [Tooltip("上げているかを伝える Animator の Bool パラメーターの名前")]
+    [SerializeField] private string raisedParameter = "Raised";
 
     /// <summary>いま上げているか。</summary>
     public bool IsRaised { get; private set; }
@@ -51,15 +50,8 @@ public class YubisumaThumb : MonoBehaviour
     /// </summary>
     public bool IsRemoved { get; private set; }
 
-    /// <summary>この親指が付いている手（握りこぶしごと動かすときに使う）。</summary>
-    public Transform Hand => transform.parent != null ? transform.parent : transform;
-
-    /// <summary>この手を取り除く。以後は入力を受けず、本数にも数えない。</summary>
-    public void Remove()
-    {
-        IsRemoved = true;
-        IsRaised = false;
-    }
+    /// <summary>この指が付いている手（手ごと動かすときに使う）。</summary>
+    public Transform Hand => transform;
 
     /// <summary>画面の案内に出すキーの名前。</summary>
     public string KeyName
@@ -77,10 +69,24 @@ public class YubisumaThumb : MonoBehaviour
         }
     }
 
-    private void Start()
+    private int raisedHash;
+
+    /// <summary>この手を取り除く。以後は入力を受けず、本数にも数えない。</summary>
+    public void Remove()
     {
-        ApplyColor();
-        transform.localRotation = TargetRotation();
+        IsRemoved = true;
+        IsRaised = false;
+        ApplyAnimation();
+    }
+
+    private void Awake()
+    {
+        if (animator == null)
+        {
+            animator = GetComponentInChildren<Animator>();
+        }
+
+        raisedHash = Animator.StringToHash(raisedParameter);
     }
 
     private void Update()
@@ -95,12 +101,16 @@ public class YubisumaThumb : MonoBehaviour
 
         if (wasRaised != IsRaised)
         {
-            ApplyColor();
+            ApplyAnimation();
         }
+    }
 
-        // 目標の角度へなめらかに近づける（パッと切り替わるより、上げたことが分かりやすい）
-        transform.localRotation = Quaternion.Slerp(
-            transform.localRotation, TargetRotation(), 1f - Mathf.Exp(-turnSpeed * Time.deltaTime));
+    private void ApplyAnimation()
+    {
+        if (animator != null && animator.runtimeAnimatorController != null)
+        {
+            animator.SetBool(raisedHash, IsRaised);
+        }
     }
 
     private bool ReadRaised()
@@ -117,18 +127,5 @@ public class YubisumaThumb : MonoBehaviour
         return mode == RaiseMode.Hold
             ? control.isPressed
             : control.wasPressedThisFrame ? !IsRaised : IsRaised;
-    }
-
-    private Quaternion TargetRotation()
-    {
-        return Quaternion.Euler(0f, 0f, IsRaised ? 0f : loweredAngle);
-    }
-
-    private void ApplyColor()
-    {
-        if (thumbRenderer != null)
-        {
-            thumbRenderer.material.color = IsRaised ? raisedColor : loweredColor;
-        }
     }
 }
