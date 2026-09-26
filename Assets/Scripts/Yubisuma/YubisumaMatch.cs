@@ -11,7 +11,9 @@ using UnityEngine.InputSystem;
 ///   ④ 数字を出した瞬間に上がっている親指の合計が、指定した数と同じなら**当たり**。
 ///      番のプレイヤーの手を1つ、下へ流して画面の外へ出し、消す
 ///   ⑤ 当たり・はずれに関係なく、**いっせーのごとに番を交代**する
-///   ⑥ 手が無くなったプレイヤーの勝ち
+///   ⑥ 手が無くなったプレイヤーが、**そのゲームを取る**
+///   ⑦ **先に <see cref="winsToWinMatch"/> ゲーム取ったプレイヤーの勝ち**（初期値は2＝BO3）。
+///      まだ決まらなければ、全員の手を元に戻し、**取られた側の番から**次のゲームを始める
 /// </summary>
 public class YubisumaMatch : MonoBehaviour
 {
@@ -33,9 +35,16 @@ public class YubisumaMatch : MonoBehaviour
     [Tooltip("参加するプレイヤー。この順に番が回る")]
     [SerializeField] private YubisumaPlayer[] players = new YubisumaPlayer[0];
 
+    [Tooltip("何ゲーム先に取ったら勝ちか。2 なら BO3（3ゲーム中2ゲーム先取）")]
+    [Min(1)]
+    [SerializeField] private int winsToWinMatch = 2;
+
     [Header("時間（秒）")]
-    [Tooltip("「指スマスタート！」を出しておく時間")]
+    [Tooltip("「指スマスタート！」や「○ゲーム目」を出しておく時間")]
     [SerializeField] private float introSeconds = 1.5f;
+
+    [Tooltip("ゲームを取ったあと、次のゲームを始めるまでの時間")]
+    [SerializeField] private float gameResultSeconds = 2.5f;
 
     [Tooltip("「いっせーの」から「いっせーの ＜数字＞！」までの遅れ")]
     [SerializeField] private float callDelaySeconds = 1.5f;
@@ -71,6 +80,12 @@ public class YubisumaMatch : MonoBehaviour
     private Phase phase = Phase.Intro;
     private int turnIndex;
 
+    /// <summary>プレイヤーごとの、取ったゲームの数。</summary>
+    private int[] wins = new int[0];
+
+    /// <summary>いま何ゲーム目か（1から）。</summary>
+    private int gameNumber = 1;
+
     /// <summary>最後に押された数字（0～4）。押されていなければ 0。</summary>
     private int calledNumber;
 
@@ -86,14 +101,80 @@ public class YubisumaMatch : MonoBehaviour
     private IEnumerator Start()
     {
         PrepareVoices();
+        wins = new int[players.Length];
 
         phase = Phase.Intro;
         bigMessage = "指スマスタート！";
+        subMessage = $"{winsToWinMatch}ゲーム先取";
+
+        yield return new WaitForSeconds(introSeconds);
+
+        yield return GameIntroRoutine();
+    }
+
+    /// <summary>「○ゲーム目」を出してから、番の指定を受け付け始める。</summary>
+    private IEnumerator GameIntroRoutine()
+    {
+        phase = Phase.Intro;
+        bigMessage = $"{gameNumber}ゲーム目";
+        subMessage = string.Empty;
 
         yield return new WaitForSeconds(introSeconds);
 
         bigMessage = string.Empty;
         phase = Phase.WaitingCall;
+    }
+
+    /// <summary>
+    /// <paramref name="winnerIndex"/> のプレイヤーがゲームを取ったときの流れ。
+    /// 試合が決まれば止め、決まらなければ手を戻して次のゲームへ進む。
+    /// </summary>
+    private IEnumerator GameWonRoutine(int winnerIndex)
+    {
+        YubisumaPlayer winner = players[winnerIndex];
+        wins[winnerIndex]++;
+
+        Debug.Log($"[指スマ] {winner.DisplayName} が {gameNumber}ゲーム目を取った（{ScoreText()}）");
+
+        if (wins[winnerIndex] >= winsToWinMatch)
+        {
+            phase = Phase.GameOver;
+            bigMessage = $"{winner.DisplayName} の勝ち！";
+            subMessage = ScoreText();
+            yield break;
+        }
+
+        bigMessage = $"{winner.DisplayName} が {gameNumber}ゲーム目を取った！";
+        subMessage = ScoreText();
+
+        yield return new WaitForSeconds(gameResultSeconds);
+
+        // 全員の手を両手とも元に戻す
+        ForEachPlayer(player => player.RestoreHands());
+
+        // 次のゲームは、取られた側（勝った人の次の人）の番から始める
+        turnIndex = (winnerIndex + 1) % players.Length;
+        gameNumber++;
+
+        yield return GameIntroRoutine();
+    }
+
+    /// <summary>「プレイヤー1 1 - 0 プレイヤー2」の形のスコア。3人以上なら「名前 勝ち数」を並べる。</summary>
+    private string ScoreText()
+    {
+        if (players.Length == 2 && wins.Length == 2)
+        {
+            return $"{players[0].DisplayName}  {wins[0]} - {wins[1]}  {players[1].DisplayName}";
+        }
+
+        System.Text.StringBuilder builder = new System.Text.StringBuilder();
+
+        for (int i = 0; i < players.Length && i < wins.Length; i++)
+        {
+            builder.Append(i == 0 ? string.Empty : " ／ ").Append($"{players[i].DisplayName} {wins[i]}");
+        }
+
+        return builder.ToString();
     }
 
     private void Update()
@@ -172,7 +253,7 @@ public class YubisumaMatch : MonoBehaviour
 
             if (removed != null)
             {
-                StartCoroutine(ScrollOutAndDestroy(removed.Hand));
+                StartCoroutine(ScrollOutAndHide(removed.Hand));
             }
         }
 
@@ -180,9 +261,8 @@ public class YubisumaMatch : MonoBehaviour
 
         if (hit && caller.RemainingHands == 0)
         {
-            phase = Phase.GameOver;
-            bigMessage = $"{caller.DisplayName} の勝ち！";
-            subMessage = string.Empty;
+            // 両手が無くなった＝このゲームを取った。先取数に届いたかは GameWonRoutine で決める
+            yield return GameWonRoutine(turnIndex);
             yield break;
         }
 
@@ -261,8 +341,11 @@ public class YubisumaMatch : MonoBehaviour
         return total;
     }
 
-    /// <summary>手を下へ流して画面の外へ出し、最後に消す。</summary>
-    private IEnumerator ScrollOutAndDestroy(Transform hand)
+    /// <summary>
+    /// 手を下へ流して画面の外へ出し、最後に見えなくする（処理も止まる）。
+    /// **次のゲームで元に戻すため、壊さずに非表示にしておく。**
+    /// </summary>
+    private IEnumerator ScrollOutAndHide(Transform hand)
     {
         Vector3 start = hand.localPosition;
         Vector3 end = start + Vector3.down * scrollDistance;
@@ -275,7 +358,7 @@ public class YubisumaMatch : MonoBehaviour
             yield return null;
         }
 
-        Destroy(hand.gameObject);
+        hand.gameObject.SetActive(false);
     }
 
     // ------------------------------------------------------------
@@ -300,6 +383,13 @@ public class YubisumaMatch : MonoBehaviour
                 : $"{CurrentPlayer.DisplayName} の番";
 
             DrawShadowed(new Rect(0f, Screen.height - 120f * scale, Screen.width, 50f * scale), turn, turnStyle);
+        }
+
+        // 番の表示のさらに上に、ゲームのスコアを出す
+        if (wins.Length > 0 && phase != Phase.GameOver)
+        {
+            DrawShadowed(new Rect(0f, Screen.height - 170f * scale, Screen.width, 50f * scale),
+                $"{ScoreText()}（{winsToWinMatch}ゲーム先取）", turnStyle);
         }
 
         if (!string.IsNullOrEmpty(bigMessage))
