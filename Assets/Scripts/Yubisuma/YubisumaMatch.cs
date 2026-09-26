@@ -130,12 +130,19 @@ public class YubisumaMatch : MonoBehaviour
         bigMessage = "いっせーの";
         subMessage = string.Empty;
 
+        // 「いっせーの」の間は、全員の手を握りこぶしに戻す。
+        // キーを押していても指は立たない（押しているかどうかは覚えておく）
+        ForEachPlayer(player => player.HideHands());
+
         yield return new WaitForSeconds(callDelaySeconds);
 
         // 「せ！」の代わりに、番のプレイヤーが指定していた数字を出す（例：いっせーの 2！）
         bigMessage = $"いっせーの {calledNumber}！";
 
-        // ★数字を出した瞬間に上がっている本数で決める
+        // ★この瞬間にキーを押している手だけ、一斉に指を立てる。結果を出している間はその形で止める
+        ForEachPlayer(player => player.RevealHands());
+
+        // ★数字を出した瞬間に上がっている本数で決める（見えている指の本数と同じ）
         int total = CountRaised();
         bool hit = total == calledNumber;
 
@@ -168,9 +175,23 @@ public class YubisumaMatch : MonoBehaviour
         // 当たってもはずれても、いっせーのごとに番を交代する
         turnIndex = (turnIndex + 1) % players.Length;
 
+        // 手の見た目を、ふだんの動き（キーに合わせてすぐ動く）に戻す
+        ForEachPlayer(player => player.ShowHandsLive());
+
         bigMessage = string.Empty;
         subMessage = string.Empty;
         phase = Phase.WaitingCall;
+    }
+
+    private void ForEachPlayer(System.Action<YubisumaPlayer> action)
+    {
+        foreach (YubisumaPlayer player in players)
+        {
+            if (player != null)
+            {
+                action(player);
+            }
+        }
     }
 
     private int CountRaised()
