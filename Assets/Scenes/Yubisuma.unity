@@ -761,16 +761,23 @@ MonoBehaviour:
   scrollDistance: 8
   scrollSeconds: 1
   voiceSource: {fileID: 563401015}
-  isseenoVoice: {fileID: 8300000, guid: bba34ae0dc97dad47ba69f6eca51a181, type: 3}
+  isseenoVoice: {fileID: 8300000, guid: a2cc0c77bfc3a2044afec5c352fb7aad, type: 3}
   numberVoices:
-  - {fileID: 8300000, guid: 5786211b5a978114db3060a2ac5ac4cc, type: 3}
-  - {fileID: 8300000, guid: 9d20fba9099195547958b375fe1b9bb7, type: 3}
-  - {fileID: 8300000, guid: ed71c25a602c8824b800cfd71d4cf0da, type: 3}
-  - {fileID: 8300000, guid: fa760acfe789b1a449f8ca071f148d01, type: 3}
-  - {fileID: 8300000, guid: 3954903ecead80c48a517a089f9b2e4e, type: 3}
+  - {fileID: 8300000, guid: 56369fb2b72c2fb4aa0f4b6b59fc5c46, type: 3}
+  - {fileID: 8300000, guid: 317c8526dce26df4b998d83f889ba9ee, type: 3}
+  - {fileID: 8300000, guid: 9e4a9acf7f442624dac44aacce340c94, type: 3}
+  - {fileID: 8300000, guid: 6d0cd03e84a89fb4e86172df20910188, type: 3}
+  - {fileID: 8300000, guid: 46ed4cc98e8cc4549adba380eb1ef20d, type: 3}
+  skillVoices:
+  - {fileID: 0}
+  - {fileID: 8300000, guid: 0efd04277cec07e488a37b715148dacb, type: 3}
+  - {fileID: 8300000, guid: 9aea77b441231f848a91176d673bd587, type: 3}
+  - {fileID: 8300000, guid: 92a6a733211c276408b22797483437f3, type: 3}
+  - {fileID: 8300000, guid: 6bb011c389efc9349b3c34c20ba8357b, type: 3}
+  - {fileID: 8300000, guid: ca625639ca1e4654996ef0c60103fa3a, type: 3}
+  - {fileID: 8300000, guid: 520eb6f3d304b1a46b58050a8dd4a45d, type: 3}
   handOutSounds:
-  - {fileID: 8300000, guid: 0ef9d887acd671f47a09e0a72ac19995, type: 3}
-  - {fileID: 8300000, guid: a594bfe5bd417f449970fcfbf6f438ee, type: 3}
+  - {fileID: 8300000, guid: 73b1f3752daeb96478527271fbc240de, type: 3}
   bgmDuckRatio: 0.3
   bgmFadeSeconds: 0.2
   uiScale: 1.5

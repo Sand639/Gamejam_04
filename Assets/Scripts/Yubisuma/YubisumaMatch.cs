@@ -95,6 +95,10 @@ public class YubisumaMatch : MonoBehaviour
     [Tooltip("数字の声。0～4 の順に入れる（0番目が「0」）")]
     [SerializeField] private AudioClip[] numberVoices = new AudioClip[MaxCall + 1];
 
+    [Tooltip("スキルの声。「いっせーの ＜スキル名＞！」のときに鳴らす。" +
+             "順番は None（使わない）、コンクリ、セメント、イーブン、オッズ、ピース、サンダー")]
+    [SerializeField] private AudioClip[] skillVoices = new AudioClip[7];
+
     [Tooltip("当てられた手が画面の外へ流れていくときの音。ここに入れたものからランダムで1つ鳴らす")]
     [SerializeField] private AudioClip[] handOutSounds = new AudioClip[0];
 
@@ -440,7 +444,7 @@ public class YubisumaMatch : MonoBehaviour
 
         // 「せ！」の代わりに、番のプレイヤーが指定していた数字を出す（例：いっせーの 2！）。
         // スキルを選んでいたら、数字の代わりにスキル名を出す（例：いっせーの コンクリ！）。
-        // スキル名の声はまだ無いので、そのときは声を鳴らさない
+        // どちらも、その声を鳴らす
         if (skill == YubisumaSkillType.None)
         {
             bigMessage = $"いっせーの {calledNumber}！";
@@ -449,6 +453,8 @@ public class YubisumaMatch : MonoBehaviour
         else
         {
             bigMessage = $"いっせーの {YubisumaSkill.NameOf(skill)}！";
+            int index = (int)skill;
+            PlayVoice(index < skillVoices.Length ? skillVoices[index] : null);
         }
 
         // ★この瞬間にキーを押している手だけ、一斉に指を立てる。結果を出している間はその形で止める
@@ -612,6 +618,14 @@ public class YubisumaMatch : MonoBehaviour
         }
 
         foreach (AudioClip clip in handOutSounds)
+        {
+            if (clip != null)
+            {
+                clip.LoadAudioData();
+            }
+        }
+
+        foreach (AudioClip clip in skillVoices)
         {
             if (clip != null)
             {
