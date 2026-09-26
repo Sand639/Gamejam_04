@@ -394,7 +394,16 @@ public class YubisumaMatch : MonoBehaviour
             result.Append($"\n{YubisumaSkill.NameOf(skill)}：相手の{(lockRaised ? "上がっている" : "下がっている")}指 {locked}本を固定");
         }
 
-        if (hit && !winsGame)
+        if (winsGame)
+        {
+            // ピース／サンダーで勝ったときは、残っている手を全部いっしょに流して画面の外へ出す
+            // （ふつうに勝つとき、最後の手が流れていくのと同じ見せ方）
+            for (YubisumaThumb removed = caller.RemoveOneHand(); removed != null; removed = caller.RemoveOneHand())
+            {
+                StartCoroutine(ScrollOutAndHide(removed.Hand));
+            }
+        }
+        else if (hit)
         {
             YubisumaThumb removed = caller.RemoveOneHand();
 
