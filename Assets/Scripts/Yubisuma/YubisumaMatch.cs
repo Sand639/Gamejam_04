@@ -49,6 +49,9 @@ public class YubisumaMatch : MonoBehaviour
     [Min(1)]
     [SerializeField] private int winsToWinMatch = 2;
 
+    [Tooltip("勝負がついたあと、Enter で戻るタイトル画面のシーンの名前")]
+    [SerializeField] private string titleSceneName = "Title";
+
     [Header("スキル")]
     [Tooltip("スキルを使うキー。Players と同じ順（1人目、2人目…）")]
     [SerializeField] private Key[] skillKeys = { Key.W, Key.UpArrow };
@@ -174,8 +177,9 @@ public class YubisumaMatch : MonoBehaviour
         if (wins[winnerIndex] >= winsToWinMatch)
         {
             phase = Phase.GameOver;
-            bigMessage = $"{winner.DisplayName} の勝ち！";
-            subMessage = ScoreText();
+            bigMessage = $"{winner.DisplayName} の勝利！";
+            subMessage = $"{ScoreText()}\n\nEnter でタイトルに戻る";
+            Debug.Log($"[指スマ] {winner.DisplayName} の勝利（{ScoreText()}）");
             yield break;
         }
 
@@ -232,12 +236,36 @@ public class YubisumaMatch : MonoBehaviour
         return marks.ToString();
     }
 
+    /// <summary>タイトル画面へ戻る。</summary>
+    private void ReturnToTitle()
+    {
+        if (!Application.CanStreamedLevelBeLoaded(titleSceneName))
+        {
+            Debug.LogError($"シーン「{titleSceneName}」がビルドの一覧に入っていないため、タイトルに戻れません。");
+            return;
+        }
+
+        Debug.Log("[指スマ] タイトル画面に戻る");
+        UnityEngine.SceneManagement.SceneManager.LoadScene(titleSceneName);
+    }
+
     private void Update()
     {
         Keyboard keyboard = Keyboard.current;
 
         if (keyboard == null)
         {
+            return;
+        }
+
+        // 勝負がついたら、Enter でタイトル画面に戻る
+        if (phase == Phase.GameOver)
+        {
+            if (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame)
+            {
+                ReturnToTitle();
+            }
+
             return;
         }
 
