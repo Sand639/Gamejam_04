@@ -212,6 +212,10 @@ public static class YubisumaSceneSetup
         thumbs.GetArrayElementAtIndex(1).objectReferenceValue = rightThumb;
         serialized.ApplyModifiedPropertiesWithoutUndo();
 
+        // 立てた中指にモザイクをかける
+        YubisumaMosaicSetup.Attach(leftThumb, root.transform, camera);
+        YubisumaMosaicSetup.Attach(rightThumb, root.transform, camera);
+
         return player;
     }
 
