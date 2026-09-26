@@ -95,6 +95,14 @@ public class YubisumaMatch : MonoBehaviour
     [Tooltip("数字の声。0～4 の順に入れる（0番目が「0」）")]
     [SerializeField] private AudioClip[] numberVoices = new AudioClip[MaxCall + 1];
 
+    [Header("BGM を下げる（声を聞こえやすくする）")]
+    [Tooltip("「いっせーの」から結果が出終わるまで、BGM の音量をここまで下げる（元の音量に対する割合）。1 なら下げない")]
+    [Range(0f, 1f)]
+    [SerializeField] private float bgmDuckRatio = 0.3f;
+
+    [Tooltip("BGM を下げる／戻すのにかける時間（秒）")]
+    [SerializeField] private float bgmFadeSeconds = 0.2f;
+
     [Header("表示")]
     [Tooltip("文字の大きさ（1920×1080 のときの値。窓が小さいと自動で縮む）")]
     [Range(0.5f, 4f)]
@@ -136,6 +144,11 @@ public class YubisumaMatch : MonoBehaviour
     /// **かけた人の次の番が終わるまで**続き、終わったら外す。
     /// </summary>
     private LockStage[] placedLock = new LockStage[0];
+
+    /// <summary>BGM の元の音量（下げる前）。まだ一度も下げていなければ負の値。</summary>
+    private float bgmBaseVolume = -1f;
+
+    private Coroutine bgmFade;
 
     /// <summary>「モザイク：あり／なし」をいつまで出しておくか（Time.time）。</summary>
     private float mosaicNoticeUntil = -1f;
@@ -387,6 +400,9 @@ public class YubisumaMatch : MonoBehaviour
 
         bigMessage = "いっせーの";
         subMessage = string.Empty;
+
+        // 声が BGM に埋もれないよう、結果が出終わるまで BGM を下げる
+        DuckBgm(true);
         PlayVoice(isseenoVoice);
 
         // 「いっせーの」の間は、全員の手を握りこぶしに戻す。
@@ -515,6 +531,9 @@ public class YubisumaMatch : MonoBehaviour
 
         yield return new WaitForSeconds(resultSeconds);
 
+        // 結果が出終わったので、BGM を元の音量に戻す
+        DuckBgm(false);
+
         if (winsGame || (hit && caller.RemainingHands == 0))
         {
             // このゲームを取った。先取数に届いたかは GameWonRoutine で決める
@@ -581,6 +600,72 @@ public class YubisumaMatch : MonoBehaviour
         voiceSource.Stop();
         voiceSource.clip = clip;
         voiceSource.Play();
+    }
+
+    /// <summary>
+    /// BGM を下げる（<paramref name="duck"/> が true）／元の音量に戻す（false）。
+    ///
+    /// 声の音量はすでに最大（1）で、Unity では 1 より大きくできない。
+    /// そのため声を大きくする代わりに、**声が鳴っている間だけ BGM を下げて**聞こえやすくする。
+    /// BGM は <see cref="BGMManager"/> が鳴らしている（無ければ何もしない）。
+    /// </summary>
+    private void DuckBgm(bool duck)
+    {
+        AudioSource bgm = BGMManager.Instance != null ? BGMManager.Instance.audioSource : null;
+
+        if (bgm == null)
+        {
+            return;
+        }
+
+        // 元の音量は最初に一度だけ覚える
+        // （戻している途中で覚え直すと、下げるたびに少しずつ小さくなっていくため）
+        if (bgmBaseVolume < 0f)
+        {
+            bgmBaseVolume = bgm.volume;
+        }
+
+        float target = duck ? bgmBaseVolume * bgmDuckRatio : bgmBaseVolume;
+
+        if (bgmFade != null)
+        {
+            StopCoroutine(bgmFade);
+        }
+
+        bgmFade = StartCoroutine(FadeVolume(bgm, target));
+    }
+
+    private IEnumerator FadeVolume(AudioSource source, float target)
+    {
+        float start = source.volume;
+
+        for (float time = 0f; time < bgmFadeSeconds; time += Time.deltaTime)
+        {
+            if (source == null)
+            {
+                yield break;
+            }
+
+            source.volume = Mathf.Lerp(start, target, time / bgmFadeSeconds);
+            yield return null;
+        }
+
+        if (source != null)
+        {
+            source.volume = target;
+        }
+
+        bgmFade = null;
+    }
+
+    private void OnDisable()
+    {
+        // 途中でシーンを離れても、BGM を下げたままにしない（BGMManager はシーンをまたいで残るため）
+        if (bgmBaseVolume >= 0f && BGMManager.Instance != null && BGMManager.Instance.audioSource != null)
+        {
+            BGMManager.Instance.audioSource.volume = bgmBaseVolume;
+            bgmBaseVolume = -1f;
+        }
     }
 
     /// <summary><paramref name="owner"/> がかけていたコンクリ／セメントの固定を外す。</summary>
