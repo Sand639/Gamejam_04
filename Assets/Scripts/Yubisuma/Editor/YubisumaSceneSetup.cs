@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -10,25 +11,42 @@ using UnityEngine.InputSystem;
 /// Unityのメニュー「Tools > Gamejam04 > 指スマの基礎シーンを作る」から実行できる。
 ///
 /// ・画面を左右に2分割（左がプレイヤー1、右がプレイヤー2）
-/// ・プレイヤーごとに両手の親指を置く。キーは合計4つ
+/// ・プレイヤーごとに両手を置く。手は `Assets/Prefab/LeftHand` ／ `RightHand` のプレハブ
+/// ・キーは合計4つ
 ///     プレイヤー1 … 左手 A ／ 右手 D
 ///     プレイヤー2 … 左手 ← ／ 右手 →
 /// ・押している間、親指が上がる
 ///
 /// 2人の手は**離れた場所に置き、それぞれ専用のカメラで映す**。
 /// カメラの Viewport Rect で、画面の左半分・右半分に割り当てている。
+/// **カメラは手の後ろから映す**（自分の手を見ている向き。左に左手、右に右手が出る）。
 ///
 /// ※ Editor フォルダにあるため、ゲームのビルドには含まれない。
 /// </summary>
 public static class YubisumaSceneSetup
 {
     private const string ScenePath = "Assets/Scenes/Yubisuma.unity";
-    private const string MaterialFolder = "Assets/Materials/Yubisuma";
+
+    private const string LeftHandPrefabPath = "Assets/Prefab/LeftHand.prefab";
+    private const string RightHandPrefabPath = "Assets/Prefab/RightHand.prefab";
+
+    /// <summary>
+    /// 指スマ用の手のアニメーション。**握りこぶし（Hand_Idle）だけ**を持つ。
+    /// 元の HandController は Idle から中指のポーズへ自動で移るため、指スマでは使わない。
+    /// </summary>
+    private const string HandControllerPath = "Assets/Animations/Hand/YubisumaHand.controller";
+    private const string IdleClipPath = "Assets/Animations/Hand/Hand_Idle.anim";
 
     /// <summary>2人の手をどれだけ離して置くか（互いのカメラに映り込まないように）</summary>
     private const float PlayerSpacing = 40f;
 
-    private static readonly Color SkinColor = new Color(0.95f, 0.78f, 0.62f);
+    /// <summary>左右の手の間の半分の距離（m）</summary>
+    private const float HandHalfSpacing = 0.5f;
+
+    /// <summary>カメラを手からどれだけ後ろ・上に置くか（m）と、見下ろす角度（度）</summary>
+    private const float CameraDistance = 3.2f;
+    private const float CameraHeight = 1.0f;
+    private const float CameraPitch = 13f;
 
     [MenuItem("Tools/Gamejam04/指スマの基礎シーンを作る")]
     public static void CreateScene()
@@ -56,19 +74,26 @@ public static class YubisumaSceneSetup
 
     private static void Create()
     {
+        GameObject leftPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(LeftHandPrefabPath);
+        GameObject rightPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(RightHandPrefabPath);
+
+        if (leftPrefab == null || rightPrefab == null)
+        {
+            Debug.LogError($"手のプレハブが見つかりません。\n{LeftHandPrefabPath}\n{RightHandPrefabPath}");
+            return;
+        }
+
+        RuntimeAnimatorController handController = EnsureHandController();
+
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
         {
             return;
         }
 
-        EnsureFolder("Assets/Materials");
-        EnsureFolder(MaterialFolder);
-        Material skin = CreateMaterial(MaterialFolder + "/YubisumaSkin.mat", SkinColor);
-
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         GameObject lightObject = new GameObject("Directional Light");
-        lightObject.transform.rotation = Quaternion.Euler(40f, -20f, 0f);
+        lightObject.transform.rotation = Quaternion.Euler(40f, 160f, 0f);
         Light light = lightObject.AddComponent<Light>();
         light.type = LightType.Directional;
         light.intensity = 1.2f;
@@ -76,12 +101,12 @@ public static class YubisumaSceneSetup
         YubisumaPlayer player1 = CreatePlayer(
             "Player1", "プレイヤー1", new Vector3(-PlayerSpacing * 0.5f, 0f, 0f),
             new Rect(0f, 0f, 0.5f, 1f), new Color(0.20f, 0.35f, 0.60f),
-            Key.A, Key.D, skin, withAudioListener: true);
+            Key.A, Key.D, leftPrefab, rightPrefab, handController, withAudioListener: true);
 
         YubisumaPlayer player2 = CreatePlayer(
             "Player2", "プレイヤー2", new Vector3(PlayerSpacing * 0.5f, 0f, 0f),
             new Rect(0.5f, 0f, 0.5f, 1f), new Color(0.60f, 0.22f, 0.22f),
-            Key.LeftArrow, Key.RightArrow, skin, withAudioListener: false);
+            Key.LeftArrow, Key.RightArrow, leftPrefab, rightPrefab, handController, withAudioListener: false);
 
         GameObject hudObject = new GameObject("YubisumaHud");
         YubisumaHud hud = hudObject.AddComponent<YubisumaHud>();
@@ -116,19 +141,22 @@ public static class YubisumaSceneSetup
 
     private static YubisumaPlayer CreatePlayer(
         string objectName, string displayName, Vector3 position, Rect viewport, Color background,
-        Key leftKey, Key rightKey, Material skin, bool withAudioListener)
+        Key leftKey, Key rightKey, GameObject leftPrefab, GameObject rightPrefab,
+        RuntimeAnimatorController handController, bool withAudioListener)
     {
         GameObject root = new GameObject(objectName);
         root.transform.position = position;
 
-        // 自分専用のカメラ。Viewport Rect で画面の左右どちらに出すかを決める
+        // 自分専用のカメラ。Viewport Rect で画面の左右どちらに出すかを決める。
+        // 手の後ろ（+Z 側）から、手のほう（-Z 方向）を見る
         GameObject cameraObject = new GameObject("Camera");
         cameraObject.transform.SetParent(root.transform, false);
-        cameraObject.transform.localPosition = new Vector3(0f, 1.2f, -5f);
-        cameraObject.transform.localRotation = Quaternion.Euler(8f, 0f, 0f);
+        cameraObject.transform.localPosition = new Vector3(0f, CameraHeight, CameraDistance);
+        cameraObject.transform.localRotation = Quaternion.Euler(CameraPitch, 180f, 0f);
         Camera camera = cameraObject.AddComponent<Camera>();
         camera.rect = viewport;
-        camera.fieldOfView = 45f;
+        camera.fieldOfView = 40f;
+        camera.nearClipPlane = 0.05f;
         camera.clearFlags = CameraClearFlags.SolidColor;
         camera.backgroundColor = background;
 
@@ -139,9 +167,9 @@ public static class YubisumaSceneSetup
             cameraObject.AddComponent<AudioListener>();
         }
 
-        // 左手は内側（右）へ、右手は内側（左）へ親指を倒す
-        YubisumaThumb leftThumb = CreateHand(root.transform, "LeftHand", -1.1f, leftKey, -80f, skin);
-        YubisumaThumb rightThumb = CreateHand(root.transform, "RightHand", 1.1f, rightKey, 80f, skin);
+        // -Z 方向を見ているので、+X が画面の左になる。左手を +X、右手を -X に置く
+        YubisumaThumb leftThumb = CreateHand(root.transform, leftPrefab, HandHalfSpacing, leftKey, handController);
+        YubisumaThumb rightThumb = CreateHand(root.transform, rightPrefab, -HandHalfSpacing, rightKey, handController);
 
         YubisumaPlayer player = root.AddComponent<YubisumaPlayer>();
         SerializedObject serialized = new SerializedObject(player);
@@ -157,45 +185,38 @@ public static class YubisumaSceneSetup
     }
 
     /// <summary>
-    /// 手を1つ作る。握りこぶし（箱）の上に、親指の付け根を置く。
-    /// **付け根を回して親指を上げ下げする**ので、見た目は付け根の子にする。
+    /// 手のプレハブを1つ置き、親指を動かす部品を付ける。
+    /// プレハブとのつながりは残す（プレハブを直せば、このシーンの手にも反映される）。
     /// </summary>
     private static YubisumaThumb CreateHand(
-        Transform parent, string name, float x, Key key, float loweredAngle, Material skin)
+        Transform parent, GameObject prefab, float x, Key key, RuntimeAnimatorController handController)
     {
-        GameObject hand = new GameObject(name);
-        hand.transform.SetParent(parent, false);
+        GameObject hand = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
         hand.transform.localPosition = new Vector3(x, 0f, 0f);
 
-        GameObject fist = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        fist.name = "Fist";
-        fist.transform.SetParent(hand.transform, false);
-        fist.transform.localScale = new Vector3(1.2f, 1f, 1f);
-        fist.GetComponent<MeshRenderer>().sharedMaterial = skin;
-        Object.DestroyImmediate(fist.GetComponent<Collider>());
+        // 握りこぶしのままにする（元のコントローラーは中指のポーズへ移ってしまう）
+        Animator animator = hand.GetComponentInChildren<Animator>();
+        if (animator != null && handController != null)
+        {
+            animator.runtimeAnimatorController = handController;
+        }
 
-        GameObject pivot = new GameObject("ThumbPivot");
-        pivot.transform.SetParent(hand.transform, false);
-        pivot.transform.localPosition = new Vector3(0f, 0.5f, -0.15f);
+        Transform thumbRoot = FindDeep(hand.transform, "Thumb");
+        Transform thumbMiddle = FindDeep(hand.transform, "Thumb2");
+        Transform thumbTip = thumbMiddle != null && thumbMiddle.childCount > 0 ? thumbMiddle.GetChild(0) : null;
 
-        GameObject thumbVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        thumbVisual.name = "Thumb";
-        thumbVisual.transform.SetParent(pivot.transform, false);
-        thumbVisual.transform.localPosition = new Vector3(0f, 0.45f, 0f);
-        thumbVisual.transform.localScale = new Vector3(0.32f, 0.9f, 0.36f);
-        MeshRenderer thumbRenderer = thumbVisual.GetComponent<MeshRenderer>();
-        thumbRenderer.sharedMaterial = skin;
-        Object.DestroyImmediate(thumbVisual.GetComponent<Collider>());
+        if (thumbRoot == null || thumbTip == null)
+        {
+            Debug.LogError($"{hand.name} に親指の骨（Thumb／Thumb2）が見つかりません。");
+        }
 
-        YubisumaThumb thumb = pivot.AddComponent<YubisumaThumb>();
+        YubisumaThumb thumb = hand.AddComponent<YubisumaThumb>();
         SerializedObject serialized = new SerializedObject(thumb);
         serialized.FindProperty("key").intValue = (int)key;
-        serialized.FindProperty("loweredAngle").floatValue = loweredAngle;
-        serialized.FindProperty("thumbRenderer").objectReferenceValue = thumbRenderer;
+        serialized.FindProperty("thumbRoot").objectReferenceValue = thumbRoot;
+        serialized.FindProperty("thumbMiddle").objectReferenceValue = thumbMiddle;
+        serialized.FindProperty("thumbTip").objectReferenceValue = thumbTip;
         serialized.ApplyModifiedPropertiesWithoutUndo();
-
-        // 最初から下げた形で置いておく（再生前のシーン画面でも分かりやすいように）
-        pivot.transform.localRotation = Quaternion.Euler(0f, 0f, loweredAngle);
 
         return thumb;
     }
@@ -203,6 +224,44 @@ public static class YubisumaSceneSetup
     // ------------------------------------------------------------
     // 補助
     // ------------------------------------------------------------
+
+    /// <summary>握りこぶし（Hand_Idle）だけのアニメーションを用意する。すでにあればそれを使う。</summary>
+    private static RuntimeAnimatorController EnsureHandController()
+    {
+        AnimatorController existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(HandControllerPath);
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        AnimationClip idle = AssetDatabase.LoadAssetAtPath<AnimationClip>(IdleClipPath);
+        if (idle == null)
+        {
+            Debug.LogWarning($"{IdleClipPath} が見つかりません。手はプレハブのアニメーションのまま動きます。");
+            return null;
+        }
+
+        return AnimatorController.CreateAnimatorControllerAtPathWithClip(HandControllerPath, idle);
+    }
+
+    private static Transform FindDeep(Transform parent, string name)
+    {
+        if (parent.name == name)
+        {
+            return parent;
+        }
+
+        foreach (Transform child in parent)
+        {
+            Transform found = FindDeep(child, name);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
 
     private static void AddToBuildSettings()
     {
@@ -218,35 +277,5 @@ public static class YubisumaSceneSetup
 
         scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
         EditorBuildSettings.scenes = scenes.ToArray();
-    }
-
-    private static Material CreateMaterial(string path, Color color)
-    {
-        Material existing = AssetDatabase.LoadAssetAtPath<Material>(path);
-        if (existing != null)
-        {
-            return existing;
-        }
-
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-        if (shader == null)
-        {
-            shader = Shader.Find("Standard");
-        }
-
-        Material material = new Material(shader) { color = color };
-        AssetDatabase.CreateAsset(material, path);
-        return material;
-    }
-
-    private static void EnsureFolder(string path)
-    {
-        if (AssetDatabase.IsValidFolder(path))
-        {
-            return;
-        }
-
-        int lastSlash = path.LastIndexOf('/');
-        AssetDatabase.CreateFolder(path.Substring(0, lastSlash), path.Substring(lastSlash + 1));
     }
 }
