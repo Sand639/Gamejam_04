@@ -77,7 +77,8 @@ public class YubisumaHud : MonoBehaviour
                 continue;
             }
 
-            builder.Append(i == 0 ? "左手 " : " ／ 右手 ").Append(thumbs[i].KeyName);
+            // 「左／右」は画面の上での位置（手のモデルの左右ではない）
+            builder.Append(i == 0 ? "左 " : " ／ 右 ").Append(thumbs[i].KeyName);
         }
 
         builder.AppendLine();
