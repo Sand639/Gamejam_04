@@ -23,7 +23,7 @@ using UnityEngine.InputSystem;
 ///   ・誰かが**当てたとき、当てていない側**はランダムで1つもらえる（**使わずに持っていたら、もらえない**）
 ///   ・使わなかったスキルは、次のゲームへ持ち越す
 ///   ・効果は <see cref="YubisumaSkillType"/> を読むこと。
-///     コンクリ／セメントは「いっせーの ＜数字＞！」の瞬間の相手の指を固定し、**自分の次の番が来たら外す**
+///     コンクリ／セメントは「いっせーの ＜数字＞！」の瞬間の相手の指を固定し、**自分の次の番が終わったら外す**
 /// </summary>
 public class YubisumaMatch : MonoBehaviour
 {
@@ -48,6 +48,9 @@ public class YubisumaMatch : MonoBehaviour
     [Tooltip("何ゲーム先に取ったら勝ちか。2 なら BO3（3ゲーム中2ゲーム先取）")]
     [Min(1)]
     [SerializeField] private int winsToWinMatch = 2;
+
+    [Tooltip("勝負がついたあと、Enter で戻るタイトル画面のシーンの名前")]
+    [SerializeField] private string titleSceneName = "Title";
 
     [Header("スキル")]
     [Tooltip("スキルを使うキー。Players と同じ順（1人目、2人目…）")]
@@ -109,11 +112,24 @@ public class YubisumaMatch : MonoBehaviour
     /// <summary>この番で、番のプレイヤーが使ったスキル。使っていなければ None。</summary>
     private YubisumaSkillType activeSkill = YubisumaSkillType.None;
 
+    /// <summary>コンクリ／セメントの固定が、いまどの段階か（プレイヤーごと）。</summary>
+    private enum LockStage
+    {
+        /// <summary>固定をかけていない</summary>
+        None,
+
+        /// <summary>固定をかけた。次の自分の番を待っている（相手の番の間も固定は続く）</summary>
+        Placed,
+
+        /// <summary>固定をかけた人の次の番の最中。**この番が終わったら外す**</summary>
+        OwnerTurn,
+    }
+
     /// <summary>
     /// プレイヤーごとに、コンクリ／セメントで**相手の指を固定しているか**。
-    /// そのプレイヤーの次の番が来たら外す。
+    /// **かけた人の次の番が終わるまで**続き、終わったら外す。
     /// </summary>
-    private bool[] placedLock = new bool[0];
+    private LockStage[] placedLock = new LockStage[0];
 
     private string bigMessage = string.Empty;
     private string subMessage = string.Empty;
@@ -128,7 +144,7 @@ public class YubisumaMatch : MonoBehaviour
     {
         PrepareVoices();
         wins = new int[players.Length];
-        placedLock = new bool[players.Length];
+        placedLock = new LockStage[players.Length];
 
         // スキルを1つずつ配る
         for (int i = 0; i < players.Length; i++)
@@ -174,8 +190,9 @@ public class YubisumaMatch : MonoBehaviour
         if (wins[winnerIndex] >= winsToWinMatch)
         {
             phase = Phase.GameOver;
-            bigMessage = $"{winner.DisplayName} の勝ち！";
-            subMessage = ScoreText();
+            bigMessage = $"{winner.DisplayName} の勝利！";
+            subMessage = $"{ScoreText()}\n\nEnter でタイトルに戻る";
+            Debug.Log($"[指スマ] {winner.DisplayName} の勝利（{ScoreText()}）");
             yield break;
         }
 
@@ -232,12 +249,36 @@ public class YubisumaMatch : MonoBehaviour
         return marks.ToString();
     }
 
+    /// <summary>タイトル画面へ戻る。</summary>
+    private void ReturnToTitle()
+    {
+        if (!Application.CanStreamedLevelBeLoaded(titleSceneName))
+        {
+            Debug.LogError($"シーン「{titleSceneName}」がビルドの一覧に入っていないため、タイトルに戻れません。");
+            return;
+        }
+
+        Debug.Log("[指スマ] タイトル画面に戻る");
+        UnityEngine.SceneManagement.SceneManager.LoadScene(titleSceneName);
+    }
+
     private void Update()
     {
         Keyboard keyboard = Keyboard.current;
 
         if (keyboard == null)
         {
+            return;
+        }
+
+        // 勝負がついたら、Enter でタイトル画面に戻る
+        if (phase == Phase.GameOver)
+        {
+            if (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame)
+            {
+                ReturnToTitle();
+            }
+
             return;
         }
 
@@ -293,7 +334,7 @@ public class YubisumaMatch : MonoBehaviour
 
     /// <summary>
     /// 数字キーを読む。**最後に押された数字を覚えておく。**
-    /// 0～4 はそのまま、5～9 は 0 にする。テンキーも使える。
+    /// 0～4 はそのまま、5～9 は 0 にする。テンキーも使える。0 は Q でも押せる。
     /// </summary>
     private void ReadNumberKeys(Keyboard keyboard)
     {
@@ -302,8 +343,12 @@ public class YubisumaMatch : MonoBehaviour
             // キーの並びは 1～9 の次に 0 が来る（テンキーは 0～9 の順）
             Key digitKey = digit == 0 ? Key.Digit0 : Key.Digit1 + (digit - 1);
 
+            // 0 は Q でも押せる
+            bool alsoQ = digit == 0 && keyboard.qKey.wasPressedThisFrame;
+
             if (keyboard[digitKey].wasPressedThisFrame ||
-                keyboard[Key.Numpad0 + digit].wasPressedThisFrame)
+                keyboard[Key.Numpad0 + digit].wasPressedThisFrame ||
+                alsoQ)
             {
                 calledNumber = digit <= MaxCall ? digit : 0;
                 Debug.Log($"[指スマ] 指定：{calledNumber}（押したキー：{digit}）");
@@ -393,11 +438,14 @@ public class YubisumaMatch : MonoBehaviour
             result.Append($"\n{YubisumaSkill.NameOf(skill)}成功！ このゲームは {caller.DisplayName} の勝ち");
         }
 
-        // コンクリ／セメント：この瞬間の相手の指を固定する（自分の次の番が来たら外す）
+        // コンクリ／セメント：この瞬間の相手の指を固定する（自分の次の番が終わったら外す）
         if (skill == YubisumaSkillType.Concrete || skill == YubisumaSkillType.Cement)
         {
             bool lockRaised = skill == YubisumaSkillType.Cement;
             int locked = 0;
+
+            // 前にかけた固定がまだ残っていれば、新しい固定に置き換える
+            ReleaseLocksPlacedBy(turnIndex);
 
             for (int i = 0; i < players.Length; i++)
             {
@@ -407,7 +455,7 @@ public class YubisumaMatch : MonoBehaviour
                 }
             }
 
-            placedLock[turnIndex] = true;
+            placedLock[turnIndex] = LockStage.Placed;
             result.Append($"\n{YubisumaSkill.NameOf(skill)}：相手の{(lockRaised ? "上がっている" : "下がっている")}指 {locked}本を固定");
         }
 
@@ -457,21 +505,19 @@ public class YubisumaMatch : MonoBehaviour
             yield break;
         }
 
+        // この人が前の番でかけていた固定（コンクリ／セメント）は、この番が終わったので外す
+        if (placedLock[turnIndex] == LockStage.OwnerTurn)
+        {
+            ReleaseLocksPlacedBy(turnIndex);
+        }
+
         // 当たってもはずれても、いっせーのごとに番を交代する
         turnIndex = (turnIndex + 1) % players.Length;
 
-        // その人がかけていた固定（コンクリ／セメント）は、その人の番が来たら外す
-        if (placedLock[turnIndex])
+        // この人がかけた固定は、この番の間も続ける（この番が終わったら外す）
+        if (placedLock[turnIndex] == LockStage.Placed)
         {
-            for (int i = 0; i < players.Length; i++)
-            {
-                if (i != turnIndex)
-                {
-                    players[i].UnlockHands();
-                }
-            }
-
-            placedLock[turnIndex] = false;
+            placedLock[turnIndex] = LockStage.OwnerTurn;
         }
 
         // 手の見た目を、ふだんの動き（キーに合わせてすぐ動く）に戻す
@@ -518,6 +564,26 @@ public class YubisumaMatch : MonoBehaviour
         voiceSource.Stop();
         voiceSource.clip = clip;
         voiceSource.Play();
+    }
+
+    /// <summary><paramref name="owner"/> がかけていたコンクリ／セメントの固定を外す。</summary>
+    private void ReleaseLocksPlacedBy(int owner)
+    {
+        if (placedLock[owner] == LockStage.None)
+        {
+            return;
+        }
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            if (i != owner)
+            {
+                players[i].UnlockHands();
+            }
+        }
+
+        placedLock[owner] = LockStage.None;
+        Debug.Log($"[指スマ] {players[owner].DisplayName} がかけていた固定を外した");
     }
 
     private void ForEachPlayer(System.Action<YubisumaPlayer> action)
@@ -630,16 +696,38 @@ public class YubisumaMatch : MonoBehaviour
         }
     }
 
-    /// <summary>背景の色に負けないよう、黒い影を付けて描く。</summary>
+    /// <summary>
+    /// 背景の色に負けないよう、黒い影を付けて描く。
+    ///
+    /// ## 文字が二重に見えていた不具合（2026/9/26 修正）
+    ///
+    /// 文字の色は「マウスが乗っていないとき（normal）」と「乗っているとき（hover）」で別々に持っている。
+    /// 前は normal だけを黒にして影を描いていたため、**マウスが乗ると影が白っぽい色で描かれ**、
+    /// 白い文字が2つずれて重なって二重に見えていた（「○」が「◎」に見えた）。
+    /// そのため、**どの状態の色もそろえて**から描く。
+    /// </summary>
     private static void DrawShadowed(Rect rect, string text, GUIStyle style)
     {
         Color saved = style.normal.textColor;
 
-        style.normal.textColor = new Color(0f, 0f, 0f, 0.8f);
+        SetTextColor(style, new Color(0f, 0f, 0f, 0.8f));
         GUI.Label(new Rect(rect.x + 3f, rect.y + 3f, rect.width, rect.height), text, style);
 
-        style.normal.textColor = saved;
+        SetTextColor(style, saved);
         GUI.Label(rect, text, style);
+    }
+
+    /// <summary>マウスが乗っているときなども含めて、文字の色をすべて同じにする。</summary>
+    public static void SetTextColor(GUIStyle style, Color color)
+    {
+        style.normal.textColor = color;
+        style.hover.textColor = color;
+        style.active.textColor = color;
+        style.focused.textColor = color;
+        style.onNormal.textColor = color;
+        style.onHover.textColor = color;
+        style.onActive.textColor = color;
+        style.onFocused.textColor = color;
     }
 
     private void EnsureStyles()
@@ -650,12 +738,12 @@ public class YubisumaMatch : MonoBehaviour
         }
 
         bigStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
-        bigStyle.normal.textColor = Color.white;
+        SetTextColor(bigStyle, Color.white);
 
         subStyle = new GUIStyle(bigStyle) { alignment = TextAnchor.UpperCenter };
-        subStyle.normal.textColor = new Color(1f, 0.9f, 0.3f);
+        SetTextColor(subStyle, new Color(1f, 0.9f, 0.3f));
 
         turnStyle = new GUIStyle(bigStyle) { fontStyle = FontStyle.Normal };
-        turnStyle.normal.textColor = Color.white;
+        SetTextColor(turnStyle, Color.white);
     }
 }

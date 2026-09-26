@@ -319,6 +319,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 180557533655662575, guid: 52e10fc906f544247a07fa54c02a5205, type: 3}
       insertIndex: -1
       addedObject: {fileID: 120719844}
+    - targetCorrespondingSourceObject: {fileID: 180557533655662575, guid: 52e10fc906f544247a07fa54c02a5205, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 120719847}
   m_SourcePrefab: {fileID: 100100000, guid: 52e10fc906f544247a07fa54c02a5205, type: 3}
 --- !u!4 &120719841 stripped
 Transform:
@@ -351,6 +354,38 @@ MonoBehaviour:
   mode: 0
   animator: {fileID: 120719843}
   raisedParameter: Raised
+--- !u!4 &120719845 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8646236745351523921, guid: 52e10fc906f544247a07fa54c02a5205, type: 3}
+  m_PrefabInstance: {fileID: 120719840}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &120719846 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 9027976332416009344, guid: 52e10fc906f544247a07fa54c02a5205, type: 3}
+  m_PrefabInstance: {fileID: 120719840}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &120719847
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 120719842}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7972859b51ba6824ca6a7ff008f1d041, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::YubisumaFingerMosaic
+  hand: {fileID: 120719844}
+  fingerRoot: {fileID: 120719846}
+  fingerTip: {fileID: 120719845}
+  mosaic: {fileID: 792314704}
+  viewCamera: {fileID: 48230823}
+  startAlong: 0.15
+  beyondTip: 0.12
+  widthScale: 0.34
+  towardCamera: 0.35
+  cellPixelsAt1080: 32
 --- !u!1 &364222457
 GameObject:
   m_ObjectHideFlags: 0
@@ -579,6 +614,8 @@ Transform:
   - {fileID: 364222459}
   - {fileID: 1890097083}
   - {fileID: 1183014636}
+  - {fileID: 1129706732}
+  - {fileID: 832328563}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &563401014
@@ -712,6 +749,9 @@ MonoBehaviour:
   - {fileID: 615598944}
   - {fileID: 495062346}
   winsToWinMatch: 2
+  titleSceneName: Title
+  skillKeys: 250000003f000000
+  testSkill: 0
   introSeconds: 1.5
   gameResultSeconds: 2.5
   callDelaySeconds: 1.5
@@ -792,8 +832,262 @@ Transform:
   - {fileID: 48230825}
   - {fileID: 2109521005}
   - {fileID: 120719841}
+  - {fileID: 888792535}
+  - {fileID: 792314704}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &792314703
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 615598945}
+    m_Modifications:
+    - target: {fileID: 878003525427482647, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_Name
+      value: Mosaic_LeftHand
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.38
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 181.901
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 2759822669491422508, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+--- !u!4 &792314704 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+  m_PrefabInstance: {fileID: 792314703}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &832328562
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 495062347}
+    m_Modifications:
+    - target: {fileID: 878003525427482647, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_Name
+      value: Mosaic_LeftHand
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.38
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 181.901
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 2759822669491422508, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+--- !u!4 &832328563 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+  m_PrefabInstance: {fileID: 832328562}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &888792534
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 615598945}
+    m_Modifications:
+    - target: {fileID: 878003525427482647, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_Name
+      value: Mosaic_RightHand
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.38
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 181.901
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 2759822669491422508, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+--- !u!4 &888792535 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+  m_PrefabInstance: {fileID: 888792534}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1129706731
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 495062347}
+    m_Modifications:
+    - target: {fileID: 878003525427482647, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_Name
+      value: Mosaic_RightHand
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.38
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 181.901
+      objectReference: {fileID: 0}
+    - target: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 2759822669491422508, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+--- !u!4 &1129706732 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5265009263125558674, guid: bdcc749d754f53d4e96b9216401526c5, type: 3}
+  m_PrefabInstance: {fileID: 1129706731}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1183014635
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -857,6 +1151,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 180557533655662575, guid: 52e10fc906f544247a07fa54c02a5205, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1183014639}
+    - targetCorrespondingSourceObject: {fileID: 180557533655662575, guid: 52e10fc906f544247a07fa54c02a5205, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1183014642}
   m_SourcePrefab: {fileID: 100100000, guid: 52e10fc906f544247a07fa54c02a5205, type: 3}
 --- !u!4 &1183014636 stripped
 Transform:
@@ -889,6 +1186,38 @@ MonoBehaviour:
   mode: 0
   animator: {fileID: 1183014638}
   raisedParameter: Raised
+--- !u!4 &1183014640 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8646236745351523921, guid: 52e10fc906f544247a07fa54c02a5205, type: 3}
+  m_PrefabInstance: {fileID: 1183014635}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1183014641 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 9027976332416009344, guid: 52e10fc906f544247a07fa54c02a5205, type: 3}
+  m_PrefabInstance: {fileID: 1183014635}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1183014642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1183014637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7972859b51ba6824ca6a7ff008f1d041, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::YubisumaFingerMosaic
+  hand: {fileID: 1183014639}
+  fingerRoot: {fileID: 1183014641}
+  fingerTip: {fileID: 1183014640}
+  mosaic: {fileID: 832328563}
+  viewCamera: {fileID: 364222458}
+  startAlong: 0.15
+  beyondTip: 0.12
+  widthScale: 0.34
+  towardCamera: 0.35
+  cellPixelsAt1080: 32
 --- !u!1 &1503579310
 GameObject:
   m_ObjectHideFlags: 0
@@ -1079,6 +1408,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 180557533655662575, guid: 611ef3cc35fcd1742a4c5ea7a9411fe4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1890097086}
+    - targetCorrespondingSourceObject: {fileID: 180557533655662575, guid: 611ef3cc35fcd1742a4c5ea7a9411fe4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1890097089}
   m_SourcePrefab: {fileID: 100100000, guid: 611ef3cc35fcd1742a4c5ea7a9411fe4, type: 3}
 --- !u!4 &1890097083 stripped
 Transform:
@@ -1111,6 +1443,38 @@ MonoBehaviour:
   mode: 0
   animator: {fileID: 1890097085}
   raisedParameter: Raised
+--- !u!4 &1890097087 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8646236745351523921, guid: 611ef3cc35fcd1742a4c5ea7a9411fe4, type: 3}
+  m_PrefabInstance: {fileID: 1890097082}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1890097088 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 9027976332416009344, guid: 611ef3cc35fcd1742a4c5ea7a9411fe4, type: 3}
+  m_PrefabInstance: {fileID: 1890097082}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1890097089
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1890097084}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7972859b51ba6824ca6a7ff008f1d041, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::YubisumaFingerMosaic
+  hand: {fileID: 1890097086}
+  fingerRoot: {fileID: 1890097088}
+  fingerTip: {fileID: 1890097087}
+  mosaic: {fileID: 1129706732}
+  viewCamera: {fileID: 364222458}
+  startAlong: 0.15
+  beyondTip: 0.12
+  widthScale: 0.34
+  towardCamera: 0.35
+  cellPixelsAt1080: 32
 --- !u!1001 &2109521004
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1174,6 +1538,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 180557533655662575, guid: 611ef3cc35fcd1742a4c5ea7a9411fe4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2109521008}
+    - targetCorrespondingSourceObject: {fileID: 180557533655662575, guid: 611ef3cc35fcd1742a4c5ea7a9411fe4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2109521011}
   m_SourcePrefab: {fileID: 100100000, guid: 611ef3cc35fcd1742a4c5ea7a9411fe4, type: 3}
 --- !u!4 &2109521005 stripped
 Transform:
@@ -1206,6 +1573,38 @@ MonoBehaviour:
   mode: 0
   animator: {fileID: 2109521007}
   raisedParameter: Raised
+--- !u!4 &2109521009 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8646236745351523921, guid: 611ef3cc35fcd1742a4c5ea7a9411fe4, type: 3}
+  m_PrefabInstance: {fileID: 2109521004}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &2109521010 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 9027976332416009344, guid: 611ef3cc35fcd1742a4c5ea7a9411fe4, type: 3}
+  m_PrefabInstance: {fileID: 2109521004}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2109521011
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2109521006}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7972859b51ba6824ca6a7ff008f1d041, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::YubisumaFingerMosaic
+  hand: {fileID: 2109521008}
+  fingerRoot: {fileID: 2109521010}
+  fingerTip: {fileID: 2109521009}
+  mosaic: {fileID: 888792535}
+  viewCamera: {fileID: 48230823}
+  startAlong: 0.15
+  beyondTip: 0.12
+  widthScale: 0.34
+  towardCamera: 0.35
+  cellPixelsAt1080: 32
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -129,10 +129,11 @@ public class YubisumaHud : MonoBehaviour
             return;
         }
 
+        // マウスが乗っても色が変わらないよう、どの状態の色もそろえる
         labelStyle = new GUIStyle(GUI.skin.label) { richText = false };
-        labelStyle.normal.textColor = Color.white;
+        YubisumaMatch.SetTextColor(labelStyle, Color.white);
 
         totalStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
-        totalStyle.normal.textColor = Color.white;
+        YubisumaMatch.SetTextColor(totalStyle, Color.white);
     }
 }
