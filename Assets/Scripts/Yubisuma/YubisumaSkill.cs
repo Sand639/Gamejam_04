@@ -120,11 +120,18 @@ public static class YubisumaSkill
     /// <summary>
     /// このスキルを使った番が当たりかどうか。
     /// イーブン・オッズは本数の偶数／奇数で、それ以外は「宣言した数字と同じか」で決める。
+    ///
+    /// **コンクリ・セメントの番は当たりにならない**（数字を宣言しないため）。
+    /// 「いっせーの コンクリ！」と数字を出さないのに、前に数字キーで指定していた数字
+    /// （押していなければ 0）で当たりになってしまう不具合があったため（2026/9/26 修正）。
     /// </summary>
     public static bool IsHit(YubisumaSkillType skill, int total, int calledNumber)
     {
         switch (skill)
         {
+            case YubisumaSkillType.Concrete:
+            case YubisumaSkillType.Cement:
+                return false;
             case YubisumaSkillType.Even: return total % 2 == 0;
             case YubisumaSkillType.Odds: return total % 2 == 1;
             default: return total == calledNumber;
