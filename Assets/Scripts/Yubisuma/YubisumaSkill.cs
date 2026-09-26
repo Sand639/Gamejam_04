@@ -87,6 +87,21 @@ public static class YubisumaSkill
         }
     }
 
+    /// <summary>画面の下の「持っているスキル」の欄に出す、短い説明。</summary>
+    public static string ShortDescriptionOf(YubisumaSkillType skill)
+    {
+        switch (skill)
+        {
+            case YubisumaSkillType.Concrete: return "下げた指が次の自分の手番まで固定";
+            case YubisumaSkillType.Cement: return "上げた指が次の自分の手番まで固定";
+            case YubisumaSkillType.Even: return "偶数の宣言";
+            case YubisumaSkillType.Odds: return "奇数の宣言";
+            case YubisumaSkillType.Piece: return "宣言2で通れば勝ち";
+            case YubisumaSkillType.Thunder: return "宣言3で通れば勝ち";
+            default: return string.Empty;
+        }
+    }
+
     /// <summary>
     /// このスキルを使った番に**宣言したことになる数字**。
     /// ピースは2、サンダーは3を宣言するスキルなので、数字キーに関係なくその数字になる。

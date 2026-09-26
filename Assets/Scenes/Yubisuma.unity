@@ -386,6 +386,81 @@ MonoBehaviour:
   widthScale: 0.34
   towardCamera: 0.35
   cellPixelsAt1080: 32
+--- !u!1 &271778815
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 271778817}
+  - component: {fileID: 271778816}
+  m_Layer: 0
+  m_Name: YubisumaUI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &271778816
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 271778815}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6dca83720cf50714b90c81aeea75facc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::YubisumaUI
+  match: {fileID: 563401016}
+  keySprites:
+  - key: 15
+    sprite: {fileID: 21300000, guid: 123249d06c55c6645923d5f0878b942f, type: 3}
+  - key: 18
+    sprite: {fileID: 21300000, guid: d39e0bad1ac33dc4eb43c5bb53616f81, type: 3}
+  - key: 61
+    sprite: {fileID: 21300000, guid: 82fa9799b4e790942b154d3402fe4d82, type: 3}
+  - key: 62
+    sprite: {fileID: 21300000, guid: c36c40b54b60bf04388d91d2016f95fc, type: 3}
+  - key: 37
+    sprite: {fileID: 21300000, guid: be500a291cfb04741ba85818f477d7ae, type: 3}
+  - key: 63
+    sprite: {fileID: 21300000, guid: 08c608a2ed2efa7488e59fbfdeb5a7c2, type: 3}
+  winEmpty: {fileID: 21300000, guid: e4deccc4d65136b4995532db3e70fe49, type: 3}
+  winFilled: {fileID: 21300000, guid: ed199a07f72b585449073ed433ab7c78, type: 3}
+  burst: {fileID: 21300000, guid: b573d6e169384a54bac14360110a0959, type: 3}
+  font: {fileID: 0}
+  panelColors:
+  - {r: 0.46, g: 0.77, b: 1, a: 1}
+  - {r: 0.96, g: 0.63, b: 0.56, a: 1}
+  frameColor: {r: 0.38, g: 0.38, b: 0.38, a: 1}
+  textColor: {r: 0.12, g: 0.12, b: 0.12, a: 1}
+  turnColor: {r: 0.85, g: 0.18, b: 0.15, a: 1}
+  skillBoxColor: {r: 0.45, g: 0.45, b: 0.45, a: 0.45}
+  keyIconSize: 64
+  winMarkSize: 72
+  keyIconBelowHand: 16
+  popSeconds: 0.25
+  popOvershoot: 2.2
+  revealScale: 1.6
+--- !u!4 &271778817
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 271778815}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &364222457
 GameObject:
   m_ObjectHideFlags: 0
@@ -1628,3 +1703,4 @@ SceneRoots:
   - {fileID: 495062347}
   - {fileID: 446194255}
   - {fileID: 563401017}
+  - {fileID: 271778817}
