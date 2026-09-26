@@ -77,14 +77,39 @@ public class YubisumaHud : MonoBehaviour
                 continue;
             }
 
-            builder.Append(i == 0 ? "左手 " : " ／ 右手 ").Append(thumbs[i].KeyName);
+            // 「左／右」は画面の上での位置（手のモデルの左右ではない）
+            builder.Append(i == 0 ? "左 " : " ／ 右 ").Append(thumbs[i].KeyName);
         }
 
         builder.AppendLine();
         builder.Append($"あげている：{player.ShownRaisedCount} 本");
 
+        // 持っているスキル
+        builder.AppendLine();
+        builder.Append(player.HeldSkill == YubisumaSkillType.None
+            ? "スキル：なし"
+            : $"スキル：{YubisumaSkill.NameOf(player.HeldSkill)}（{player.SkillKeyName}）");
+
+        // コンクリ／セメントで固定されている指
+        StringBuilder locks = new StringBuilder();
+        for (int i = 0; i < thumbs.Length; i++)
+        {
+            if (thumbs[i] != null && !thumbs[i].IsRemoved && thumbs[i].IsLocked)
+            {
+                locks.Append(locks.Length == 0 ? string.Empty : " ／ ")
+                     .Append(i == 0 ? "左 " : "右 ")
+                     .Append(thumbs[i].LockedRaised ? "上げたまま" : "下げたまま");
+            }
+        }
+
+        if (locks.Length > 0)
+        {
+            builder.AppendLine();
+            builder.Append($"固定：{locks}");
+        }
+
         float margin = 16f * scale;
-        GUI.Label(new Rect(area.x + margin, top + margin, area.width - margin * 2f, 120f * scale),
+        GUI.Label(new Rect(area.x + margin, top + margin, area.width - margin * 2f, 200f * scale),
             builder.ToString(), labelStyle);
     }
 
