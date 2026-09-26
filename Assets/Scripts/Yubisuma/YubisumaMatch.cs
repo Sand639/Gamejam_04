@@ -159,6 +159,9 @@ public class YubisumaMatch : MonoBehaviour
 
     private Coroutine bgmFade;
 
+    /// <summary>声と効果音が鳴り終わるのを待って BGM を戻す処理（待っている間だけ入っている）。</summary>
+    private Coroutine bgmRestore;
+
     /// <summary>「モザイク：あり／なし」をいつまで出しておくか（Time.time）。</summary>
     private float mosaicNoticeUntil = -1f;
 
@@ -411,6 +414,12 @@ public class YubisumaMatch : MonoBehaviour
         subMessage = string.Empty;
 
         // 声が BGM に埋もれないよう、結果が出終わるまで BGM を下げる
+        if (bgmRestore != null)
+        {
+            StopCoroutine(bgmRestore);
+            bgmRestore = null;
+        }
+
         DuckBgm(true);
         PlayVoice(isseenoVoice);
 
@@ -544,8 +553,9 @@ public class YubisumaMatch : MonoBehaviour
 
         yield return new WaitForSeconds(resultSeconds);
 
-        // 結果が出終わったので、BGM を元の音量に戻す
-        DuckBgm(false);
+        // 結果が出終わった。声と効果音が鳴り終わったら、BGM を元の音量に戻す
+        // （次の番は待たずに始める。次の「いっせーの」が先に来たら、下げたままにする）
+        bgmRestore = StartCoroutine(RestoreBgmWhenQuiet());
 
         if (winsGame || (hit && caller.RemainingHands == 0))
         {
@@ -615,7 +625,10 @@ public class YubisumaMatch : MonoBehaviour
         effectSource.spatialBlend = 0f;
     }
 
-    /// <summary>手が流れていくときの音を、入っているものからランダムで1つ鳴らす。</summary>
+    /// <summary>
+    /// 手が流れていくときの音を、入っているものからランダムで1つ鳴らす。
+    /// **数字の声が鳴っていれば、鳴り終わるのを待ってから鳴らす**（声と重ならないように）。
+    /// </summary>
     private void PlayHandOutSound()
     {
         if (effectSource == null || handOutSounds == null || handOutSounds.Length == 0)
@@ -627,9 +640,57 @@ public class YubisumaMatch : MonoBehaviour
 
         if (clip != null)
         {
-            effectSource.PlayOneShot(clip);
-            Debug.Log($"[指スマ] 手が流れていく音：{clip.name}");
+            StartCoroutine(PlayAfterVoice(clip));
         }
+    }
+
+    private IEnumerator PlayAfterVoice(AudioClip clip)
+    {
+        // 念のため、長くても数秒で待つのをやめる（声の係が止まらなくなっても音が鳴らないままにならないように）
+        float giveUpAt = Time.time + 3f;
+
+        while (voiceSource != null && voiceSource.isPlaying && Time.time < giveUpAt)
+        {
+            yield return null;
+        }
+
+        // PlayOneShot だと「鳴っているか（isPlaying）」が分からないことがあるので、ふつうに鳴らす
+        effectSource.clip = clip;
+        effectSource.Play();
+        Debug.Log($"[指スマ] 手が流れていく音：{clip.name}");
+    }
+
+    /// <summary>声も効果音も鳴り終わってから、BGM を元の音量に戻す。</summary>
+    private IEnumerator RestoreBgmWhenQuiet()
+    {
+        // 効果音は声のあとで鳴り始めるので、声が終わってすぐは効果音がまだ鳴っていないことがある。
+        // そのため、少し余裕を見て「静かな状態が続いたら」戻す
+        float quietSince = -1f;
+        float giveUpAt = Time.time + 5f;
+
+        while (Time.time < giveUpAt)
+        {
+            bool playing = (voiceSource != null && voiceSource.isPlaying) ||
+                           (effectSource != null && effectSource.isPlaying);
+
+            if (playing)
+            {
+                quietSince = -1f;
+            }
+            else if (quietSince < 0f)
+            {
+                quietSince = Time.time;
+            }
+            else if (Time.time - quietSince > 0.1f)
+            {
+                break;
+            }
+
+            yield return null;
+        }
+
+        bgmRestore = null;
+        DuckBgm(false);
     }
 
     /// <summary>声を1つ鳴らす。前の声が残っていれば止めてから鳴らす（声が重ならないように）。</summary>
