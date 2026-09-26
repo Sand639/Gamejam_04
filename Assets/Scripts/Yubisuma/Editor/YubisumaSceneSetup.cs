@@ -153,6 +153,9 @@ public static class YubisumaSceneSetup
                 LoadVoice($"{AudioFolder}/{number}.wav");
         }
 
+        // 手が流れていくときの音
+        YubisumaSoundSetup.Assign(matchSerialized);
+
         matchSerialized.ApplyModifiedPropertiesWithoutUndo();
 
         EditorSceneManager.SaveScene(scene, ScenePath);

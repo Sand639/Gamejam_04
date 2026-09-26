@@ -95,6 +95,27 @@ public class YubisumaMatch : MonoBehaviour
     [Tooltip("数字の声。0～4 の順に入れる（0番目が「0」）")]
     [SerializeField] private AudioClip[] numberVoices = new AudioClip[MaxCall + 1];
 
+    [Tooltip("スキルの声。「いっせーの ＜スキル名＞！」のときに鳴らす。" +
+             "順番は None（使わない）、コンクリ、セメント、イーブン、オッズ、ピース、サンダー")]
+    [SerializeField] private AudioClip[] skillVoices = new AudioClip[7];
+
+    [Tooltip("当てられた手が画面の外へ流れていくときの音。ここに入れたものからランダムで1つ鳴らす")]
+    [SerializeField] private AudioClip[] handOutSounds = new AudioClip[0];
+
+    /// <summary>
+    /// 手が流れていくときの音を鳴らす係。数字の声と同時に鳴るので、声を止めないよう別に持つ。
+    /// シーンに置かなくてよいよう、始まったときに自動で作る。
+    /// </summary>
+    private AudioSource effectSource;
+
+    [Header("BGM を下げる（声を聞こえやすくする）")]
+    [Tooltip("「いっせーの」から結果が出終わるまで、BGM の音量をここまで下げる（元の音量に対する割合）。1 なら下げない")]
+    [Range(0f, 1f)]
+    [SerializeField] private float bgmDuckRatio = 0.3f;
+
+    [Tooltip("BGM を下げる／戻すのにかける時間（秒）")]
+    [SerializeField] private float bgmFadeSeconds = 0.2f;
+
     [Header("表示")]
     [Tooltip("文字の大きさ（1920×1080 のときの値。窓が小さいと自動で縮む）")]
     [Range(0.5f, 4f)]
@@ -136,6 +157,14 @@ public class YubisumaMatch : MonoBehaviour
     /// **かけた人の次の番が終わるまで**続き、終わったら外す。
     /// </summary>
     private LockStage[] placedLock = new LockStage[0];
+
+    /// <summary>BGM の元の音量（下げる前）。まだ一度も下げていなければ負の値。</summary>
+    private float bgmBaseVolume = -1f;
+
+    private Coroutine bgmFade;
+
+    /// <summary>声と効果音が鳴り終わるのを待って BGM を戻す処理（待っている間だけ入っている）。</summary>
+    private Coroutine bgmRestore;
 
     /// <summary>「モザイク：あり／なし」をいつまで出しておくか（Time.time）。</summary>
     private float mosaicNoticeUntil = -1f;
@@ -387,6 +416,15 @@ public class YubisumaMatch : MonoBehaviour
 
         bigMessage = "いっせーの";
         subMessage = string.Empty;
+
+        // 声が BGM に埋もれないよう、結果が出終わるまで BGM を下げる
+        if (bgmRestore != null)
+        {
+            StopCoroutine(bgmRestore);
+            bgmRestore = null;
+        }
+
+        DuckBgm(true);
         PlayVoice(isseenoVoice);
 
         // 「いっせーの」の間は、全員の手を握りこぶしに戻す。
@@ -406,7 +444,7 @@ public class YubisumaMatch : MonoBehaviour
 
         // 「せ！」の代わりに、番のプレイヤーが指定していた数字を出す（例：いっせーの 2！）。
         // スキルを選んでいたら、数字の代わりにスキル名を出す（例：いっせーの コンクリ！）。
-        // スキル名の声はまだ無いので、そのときは声を鳴らさない
+        // どちらも、その声を鳴らす
         if (skill == YubisumaSkillType.None)
         {
             bigMessage = $"いっせーの {calledNumber}！";
@@ -415,6 +453,8 @@ public class YubisumaMatch : MonoBehaviour
         else
         {
             bigMessage = $"いっせーの {YubisumaSkill.NameOf(skill)}！";
+            int index = (int)skill;
+            PlayVoice(index < skillVoices.Length ? skillVoices[index] : null);
         }
 
         // ★この瞬間にキーを押している手だけ、一斉に指を立てる。結果を出している間はその形で止める
@@ -484,6 +524,9 @@ public class YubisumaMatch : MonoBehaviour
             {
                 StartCoroutine(ScrollOutAndHide(removed.Hand));
             }
+
+            // 何本流れても、音は1回だけ
+            PlayHandOutSound();
         }
         else if (hit)
         {
@@ -492,6 +535,7 @@ public class YubisumaMatch : MonoBehaviour
             if (removed != null)
             {
                 StartCoroutine(ScrollOutAndHide(removed.Hand));
+                PlayHandOutSound();
             }
         }
 
@@ -514,6 +558,10 @@ public class YubisumaMatch : MonoBehaviour
         subMessage = result.ToString();
 
         yield return new WaitForSeconds(resultSeconds);
+
+        // 結果が出終わった。声と効果音が鳴り終わったら、BGM を元の音量に戻す
+        // （次の番は待たずに始める。次の「いっせーの」が先に来たら、下げたままにする）
+        bgmRestore = StartCoroutine(RestoreBgmWhenQuiet());
 
         if (winsGame || (hit && caller.RemainingHands == 0))
         {
@@ -568,6 +616,95 @@ public class YubisumaMatch : MonoBehaviour
                 clip.LoadAudioData();
             }
         }
+
+        foreach (AudioClip clip in handOutSounds)
+        {
+            if (clip != null)
+            {
+                clip.LoadAudioData();
+            }
+        }
+
+        foreach (AudioClip clip in skillVoices)
+        {
+            if (clip != null)
+            {
+                clip.LoadAudioData();
+            }
+        }
+
+        // 手が流れていくときの音の係。声と同じ設定（2D の音）で、声とは別に鳴らす
+        effectSource = gameObject.AddComponent<AudioSource>();
+        effectSource.playOnAwake = false;
+        effectSource.spatialBlend = 0f;
+    }
+
+    /// <summary>
+    /// 手が流れていくときの音を、入っているものからランダムで1つ鳴らす。
+    /// **数字の声が鳴っていれば、鳴り終わるのを待ってから鳴らす**（声と重ならないように）。
+    /// </summary>
+    private void PlayHandOutSound()
+    {
+        if (effectSource == null || handOutSounds == null || handOutSounds.Length == 0)
+        {
+            return;
+        }
+
+        AudioClip clip = handOutSounds[Random.Range(0, handOutSounds.Length)];
+
+        if (clip != null)
+        {
+            StartCoroutine(PlayAfterVoice(clip));
+        }
+    }
+
+    private IEnumerator PlayAfterVoice(AudioClip clip)
+    {
+        // 念のため、長くても数秒で待つのをやめる（声の係が止まらなくなっても音が鳴らないままにならないように）
+        float giveUpAt = Time.time + 3f;
+
+        while (voiceSource != null && voiceSource.isPlaying && Time.time < giveUpAt)
+        {
+            yield return null;
+        }
+
+        // PlayOneShot だと「鳴っているか（isPlaying）」が分からないことがあるので、ふつうに鳴らす
+        effectSource.clip = clip;
+        effectSource.Play();
+        Debug.Log($"[指スマ] 手が流れていく音：{clip.name}");
+    }
+
+    /// <summary>声も効果音も鳴り終わってから、BGM を元の音量に戻す。</summary>
+    private IEnumerator RestoreBgmWhenQuiet()
+    {
+        // 効果音は声のあとで鳴り始めるので、声が終わってすぐは効果音がまだ鳴っていないことがある。
+        // そのため、少し余裕を見て「静かな状態が続いたら」戻す
+        float quietSince = -1f;
+        float giveUpAt = Time.time + 5f;
+
+        while (Time.time < giveUpAt)
+        {
+            bool playing = (voiceSource != null && voiceSource.isPlaying) ||
+                           (effectSource != null && effectSource.isPlaying);
+
+            if (playing)
+            {
+                quietSince = -1f;
+            }
+            else if (quietSince < 0f)
+            {
+                quietSince = Time.time;
+            }
+            else if (Time.time - quietSince > 0.1f)
+            {
+                break;
+            }
+
+            yield return null;
+        }
+
+        bgmRestore = null;
+        DuckBgm(false);
     }
 
     /// <summary>声を1つ鳴らす。前の声が残っていれば止めてから鳴らす（声が重ならないように）。</summary>
@@ -581,6 +718,72 @@ public class YubisumaMatch : MonoBehaviour
         voiceSource.Stop();
         voiceSource.clip = clip;
         voiceSource.Play();
+    }
+
+    /// <summary>
+    /// BGM を下げる（<paramref name="duck"/> が true）／元の音量に戻す（false）。
+    ///
+    /// 声の音量はすでに最大（1）で、Unity では 1 より大きくできない。
+    /// そのため声を大きくする代わりに、**声が鳴っている間だけ BGM を下げて**聞こえやすくする。
+    /// BGM は <see cref="BGMManager"/> が鳴らしている（無ければ何もしない）。
+    /// </summary>
+    private void DuckBgm(bool duck)
+    {
+        AudioSource bgm = BGMManager.Instance != null ? BGMManager.Instance.audioSource : null;
+
+        if (bgm == null)
+        {
+            return;
+        }
+
+        // 元の音量は最初に一度だけ覚える
+        // （戻している途中で覚え直すと、下げるたびに少しずつ小さくなっていくため）
+        if (bgmBaseVolume < 0f)
+        {
+            bgmBaseVolume = bgm.volume;
+        }
+
+        float target = duck ? bgmBaseVolume * bgmDuckRatio : bgmBaseVolume;
+
+        if (bgmFade != null)
+        {
+            StopCoroutine(bgmFade);
+        }
+
+        bgmFade = StartCoroutine(FadeVolume(bgm, target));
+    }
+
+    private IEnumerator FadeVolume(AudioSource source, float target)
+    {
+        float start = source.volume;
+
+        for (float time = 0f; time < bgmFadeSeconds; time += Time.deltaTime)
+        {
+            if (source == null)
+            {
+                yield break;
+            }
+
+            source.volume = Mathf.Lerp(start, target, time / bgmFadeSeconds);
+            yield return null;
+        }
+
+        if (source != null)
+        {
+            source.volume = target;
+        }
+
+        bgmFade = null;
+    }
+
+    private void OnDisable()
+    {
+        // 途中でシーンを離れても、BGM を下げたままにしない（BGMManager はシーンをまたいで残るため）
+        if (bgmBaseVolume >= 0f && BGMManager.Instance != null && BGMManager.Instance.audioSource != null)
+        {
+            BGMManager.Instance.audioSource.volume = bgmBaseVolume;
+            bgmBaseVolume = -1f;
+        }
     }
 
     /// <summary><paramref name="owner"/> がかけていたコンクリ／セメントの固定を外す。</summary>
