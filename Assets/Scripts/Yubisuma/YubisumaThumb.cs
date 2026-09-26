@@ -92,6 +92,9 @@ public class YubisumaThumb : MonoBehaviour
     private int raisedHash;
     private bool frozenRaised;
 
+    /// <summary>最初に置かれていた位置。当てられて流れていった手を、次のゲームで戻すのに使う。</summary>
+    private Vector3 homePosition;
+
     /// <summary>
     /// この手を取り除く。以後は入力を受けず、本数にも数えない。
     /// **見た目はそのまま残す**（立てた指のまま画面の外へ流れていくように）。
@@ -99,6 +102,21 @@ public class YubisumaThumb : MonoBehaviour
     public void Remove()
     {
         IsRemoved = true;
+    }
+
+    /// <summary>
+    /// 取り除いた手を、**最初の位置・握りこぶしの形で元に戻す**（次のゲームを始めるとき）。
+    /// </summary>
+    public void Restore()
+    {
+        gameObject.SetActive(true);
+        transform.localPosition = homePosition;
+
+        IsRemoved = false;
+        IsRaised = false;
+        frozenRaised = false;
+        Display = DisplayMode.Live;
+        ApplyAnimation();
     }
 
     /// <summary>
@@ -137,6 +155,7 @@ public class YubisumaThumb : MonoBehaviour
         }
 
         raisedHash = Animator.StringToHash(raisedParameter);
+        homePosition = transform.localPosition;
     }
 
     private void Update()

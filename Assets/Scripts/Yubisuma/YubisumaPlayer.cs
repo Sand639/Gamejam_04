@@ -100,6 +100,18 @@ public class YubisumaPlayer : MonoBehaviour
         return null;
     }
 
+    /// <summary>取り除いた手も含めて、両手とも最初の状態に戻す（次のゲームを始めるとき）。</summary>
+    public void RestoreHands()
+    {
+        foreach (YubisumaThumb thumb in thumbs)
+        {
+            if (thumb != null)
+            {
+                thumb.Restore();
+            }
+        }
+    }
+
     /// <summary>残っている手を全部、握りこぶしの見た目にする（「いっせーの」の始まり）。</summary>
     public void HideHands()
     {
