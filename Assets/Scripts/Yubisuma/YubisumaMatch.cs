@@ -14,6 +14,15 @@ using UnityEngine.InputSystem;
 ///   ⑥ 手が無くなったプレイヤーが、**そのゲームを取る**
 ///   ⑦ **先に <see cref="winsToWinMatch"/> ゲーム取ったプレイヤーの勝ち**（初期値は2＝BO3）。
 ///      まだ決まらなければ、全員の手を元に戻し、**取られた側の番から**次のゲームを始める
+///
+/// ## スキル
+///
+///   ・試合の始めに、全員に**ランダムで1つ**配る
+///   ・**自分の番で、スペースを押す前に**スキルのキー（1P：W ／ 2P：↑）で使う。**1回使うと無くなる**
+///   ・誰かが**当てたとき、当てていない側**はランダムで1つもらえる（**使わずに持っていたら、もらえない**）
+///   ・使わなかったスキルは、次のゲームへ持ち越す
+///   ・効果は <see cref="YubisumaSkillType"/> を読むこと。
+///     コンクリ／セメントは「いっせーの ＜数字＞！」の瞬間の相手の指を固定し、**自分の次の番が来たら外す**
 /// </summary>
 public class YubisumaMatch : MonoBehaviour
 {
@@ -38,6 +47,10 @@ public class YubisumaMatch : MonoBehaviour
     [Tooltip("何ゲーム先に取ったら勝ちか。2 なら BO3（3ゲーム中2ゲーム先取）")]
     [Min(1)]
     [SerializeField] private int winsToWinMatch = 2;
+
+    [Header("スキル")]
+    [Tooltip("スキルを使うキー。Players と同じ順（1人目、2人目…）")]
+    [SerializeField] private Key[] skillKeys = { Key.W, Key.UpArrow };
 
     [Header("時間（秒）")]
     [Tooltip("「指スマスタート！」や「○ゲーム目」を出しておく時間")]
@@ -89,6 +102,15 @@ public class YubisumaMatch : MonoBehaviour
     /// <summary>最後に押された数字（0～4）。押されていなければ 0。</summary>
     private int calledNumber;
 
+    /// <summary>この番で、番のプレイヤーが使ったスキル。使っていなければ None。</summary>
+    private YubisumaSkillType activeSkill = YubisumaSkillType.None;
+
+    /// <summary>
+    /// プレイヤーごとに、コンクリ／セメントで**相手の指を固定しているか**。
+    /// そのプレイヤーの次の番が来たら外す。
+    /// </summary>
+    private bool[] placedLock = new bool[0];
+
     private string bigMessage = string.Empty;
     private string subMessage = string.Empty;
 
@@ -102,6 +124,15 @@ public class YubisumaMatch : MonoBehaviour
     {
         PrepareVoices();
         wins = new int[players.Length];
+        placedLock = new bool[players.Length];
+
+        // スキルを1つずつ配る
+        for (int i = 0; i < players.Length; i++)
+        {
+            players[i].HeldSkill = YubisumaSkill.Random();
+            players[i].SkillKeyName = i < skillKeys.Length ? KeyLabel(skillKeys[i]) : string.Empty;
+            Debug.Log($"[指スマ] {players[i].DisplayName} にスキル「{YubisumaSkill.NameOf(players[i].HeldSkill)}」を配った");
+        }
 
         phase = Phase.Intro;
         bigMessage = "指スマスタート！";
@@ -149,8 +180,11 @@ public class YubisumaMatch : MonoBehaviour
 
         yield return new WaitForSeconds(gameResultSeconds);
 
-        // 全員の手を両手とも元に戻す
+        // 全員の手を両手とも元に戻す（スキルの固定も外れる）。
+        // 持っているスキルはそのまま次のゲームへ持ち越す
         ForEachPlayer(player => player.RestoreHands());
+        System.Array.Clear(placedLock, 0, placedLock.Length);
+        activeSkill = YubisumaSkillType.None;
 
         // 次のゲームは、取られた側（勝った人の次の人）の番から始める
         turnIndex = (winnerIndex + 1) % players.Length;
@@ -189,9 +223,50 @@ public class YubisumaMatch : MonoBehaviour
         // 数字はいつでも受け付ける（「いっせーの」の最中に決め直してもよい）
         ReadNumberKeys(keyboard);
 
+        if (phase == Phase.WaitingCall)
+        {
+            ReadSkillKeys(keyboard);
+        }
+
         if (phase == Phase.WaitingCall && keyboard.spaceKey.wasPressedThisFrame)
         {
             StartCoroutine(CallRoutine());
+        }
+    }
+
+    /// <summary>
+    /// スキルのキーを読む。**番のプレイヤーだけが、スペースを押す前に使える。**
+    /// 1回の番で使えるのは1つだけ。使ったスキルは無くなる。
+    /// </summary>
+    private void ReadSkillKeys(Keyboard keyboard)
+    {
+        for (int i = 0; i < players.Length && i < skillKeys.Length; i++)
+        {
+            if (skillKeys[i] == Key.None || !keyboard[skillKeys[i]].wasPressedThisFrame)
+            {
+                continue;
+            }
+
+            YubisumaPlayer player = players[i];
+
+            if (i != turnIndex)
+            {
+                subMessage = $"{player.DisplayName}：スキルは自分の番でだけ使えます";
+                continue;
+            }
+
+            if (activeSkill != YubisumaSkillType.None || player.HeldSkill == YubisumaSkillType.None)
+            {
+                continue;
+            }
+
+            activeSkill = player.HeldSkill;
+            player.HeldSkill = YubisumaSkillType.None;
+
+            subMessage = $"{player.DisplayName} がスキル「{YubisumaSkill.NameOf(activeSkill)}」を使った！\n" +
+                         YubisumaSkill.DescriptionOf(activeSkill);
+
+            Debug.Log($"[指スマ] {player.DisplayName} がスキル「{YubisumaSkill.NameOf(activeSkill)}」を使った");
         }
     }
 
@@ -221,7 +296,9 @@ public class YubisumaMatch : MonoBehaviour
         YubisumaPlayer caller = CurrentPlayer;
 
         bigMessage = "いっせーの";
-        subMessage = string.Empty;
+        subMessage = activeSkill == YubisumaSkillType.None
+            ? string.Empty
+            : $"スキル「{YubisumaSkill.NameOf(activeSkill)}」";
         PlayVoice(isseenoVoice);
 
         // 「いっせーの」の間は、全員の手を握りこぶしに戻す。
@@ -239,15 +316,44 @@ public class YubisumaMatch : MonoBehaviour
 
         // ★数字を出した瞬間に上がっている本数で決める（見えている指の本数と同じ）
         int total = CountRaised();
-        bool hit = total == calledNumber;
 
-        Debug.Log($"[指スマ] {caller.DisplayName} の番：指定 {calledNumber} ／ 上がっていた本数 {total} → {(hit ? "当たり" : "はずれ")}");
+        // 当たりかどうか。イーブン・オッズを使っていれば偶数／奇数で決まる
+        YubisumaSkillType skill = activeSkill;
+        activeSkill = YubisumaSkillType.None;
+        bool hit = YubisumaSkill.IsHit(skill, total, calledNumber);
 
-        subMessage = hit
-            ? $"{total}本！ {caller.DisplayName} 当たり！"
-            : $"{total}本… はずれ";
+        // ピース（2）・サンダー（3）で当てたら、そのゲームにすぐ勝つ
+        bool winsGame = hit && YubisumaSkill.WinsGameOnHit(skill, calledNumber);
 
-        if (hit)
+        Debug.Log($"[指スマ] {caller.DisplayName} の番：指定 {calledNumber} ／ 上がっていた本数 {total} ／ スキル {YubisumaSkill.NameOf(skill)} → {(hit ? "当たり" : "はずれ")}{(winsGame ? "（ゲームに勝ち）" : string.Empty)}");
+
+        System.Text.StringBuilder result = new System.Text.StringBuilder();
+        result.Append(hit ? $"{total}本！ {caller.DisplayName} 当たり！" : $"{total}本… はずれ");
+
+        if (winsGame)
+        {
+            result.Append($"\n{YubisumaSkill.NameOf(skill)}成功！ このゲームは {caller.DisplayName} の勝ち");
+        }
+
+        // コンクリ／セメント：この瞬間の相手の指を固定する（自分の次の番が来たら外す）
+        if (skill == YubisumaSkillType.Concrete || skill == YubisumaSkillType.Cement)
+        {
+            bool lockRaised = skill == YubisumaSkillType.Cement;
+            int locked = 0;
+
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (i != turnIndex)
+                {
+                    locked += players[i].LockHands(lockRaised);
+                }
+            }
+
+            placedLock[turnIndex] = true;
+            result.Append($"\n{YubisumaSkill.NameOf(skill)}：相手の{(lockRaised ? "上がっている" : "下がっている")}指 {locked}本を固定");
+        }
+
+        if (hit && !winsGame)
         {
             YubisumaThumb removed = caller.RemoveOneHand();
 
@@ -257,17 +363,49 @@ public class YubisumaMatch : MonoBehaviour
             }
         }
 
+        // 当てたときは、当てていない側にスキルを1つ配る（使わずに持っていたら、もらえない）
+        if (hit)
+        {
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (i == turnIndex || players[i].HeldSkill != YubisumaSkillType.None)
+                {
+                    continue;
+                }
+
+                players[i].HeldSkill = YubisumaSkill.Random();
+                result.Append($"\n{players[i].DisplayName} はスキル「{YubisumaSkill.NameOf(players[i].HeldSkill)}」を手に入れた");
+                Debug.Log($"[指スマ] {players[i].DisplayName} がスキル「{YubisumaSkill.NameOf(players[i].HeldSkill)}」を手に入れた");
+            }
+        }
+
+        subMessage = result.ToString();
+
         yield return new WaitForSeconds(resultSeconds);
 
-        if (hit && caller.RemainingHands == 0)
+        if (winsGame || (hit && caller.RemainingHands == 0))
         {
-            // 両手が無くなった＝このゲームを取った。先取数に届いたかは GameWonRoutine で決める
+            // このゲームを取った。先取数に届いたかは GameWonRoutine で決める
             yield return GameWonRoutine(turnIndex);
             yield break;
         }
 
         // 当たってもはずれても、いっせーのごとに番を交代する
         turnIndex = (turnIndex + 1) % players.Length;
+
+        // その人がかけていた固定（コンクリ／セメント）は、その人の番が来たら外す
+        if (placedLock[turnIndex])
+        {
+            for (int i = 0; i < players.Length; i++)
+            {
+                if (i != turnIndex)
+                {
+                    players[i].UnlockHands();
+                }
+            }
+
+            placedLock[turnIndex] = false;
+        }
 
         // 手の見た目を、ふだんの動き（キーに合わせてすぐ動く）に戻す
         ForEachPlayer(player => player.ShowHandsLive());
@@ -371,15 +509,22 @@ public class YubisumaMatch : MonoBehaviour
 
         float scale = Mathf.Max(0.5f, uiScale * Mathf.Min(Screen.width / 1920f, Screen.height / 1080f));
         bigStyle.fontSize = Mathf.RoundToInt(64 * scale);
-        subStyle.fontSize = Mathf.RoundToInt(32 * scale);
+        subStyle.fontSize = Mathf.RoundToInt(26 * scale);
         turnStyle.fontSize = Mathf.RoundToInt(26 * scale);
 
         // 下の真ん中（合計の表示の上）に、いまの番を出す。指定した数字は出さない。
         // 上に出すと、各プレイヤーの名前の表示と重なるため
         if (phase == Phase.WaitingCall || phase == Phase.Calling)
         {
+            // スキルを持っていて、まだ使っていなければ、使うキーも案内する
+            string skillHint = phase == Phase.WaitingCall &&
+                               activeSkill == YubisumaSkillType.None &&
+                               CurrentPlayer.HeldSkill != YubisumaSkillType.None
+                ? $" ／ スキルは {CurrentPlayer.SkillKeyName}"
+                : string.Empty;
+
             string turn = phase == Phase.WaitingCall
-                ? $"{CurrentPlayer.DisplayName} の番（数字キー 0～4 で指定 → スペース）"
+                ? $"{CurrentPlayer.DisplayName} の番（数字キー 0～4 で指定 → スペース{skillHint}）"
                 : $"{CurrentPlayer.DisplayName} の番";
 
             DrawShadowed(new Rect(0f, Screen.height - 120f * scale, Screen.width, 50f * scale), turn, turnStyle);
@@ -400,8 +545,22 @@ public class YubisumaMatch : MonoBehaviour
 
         if (!string.IsNullOrEmpty(subMessage))
         {
-            DrawShadowed(new Rect(0f, Screen.height * 0.5f + 60f * scale, Screen.width, 60f * scale),
+            // スキルの結果などで数行になることがあるので、上から詰めて描く
+            DrawShadowed(new Rect(0f, Screen.height * 0.5f + 55f * scale, Screen.width, 200f * scale),
                 subMessage, subStyle);
+        }
+    }
+
+    /// <summary>画面の案内に出すキーの名前（矢印は記号にする）。</summary>
+    private static string KeyLabel(Key key)
+    {
+        switch (key)
+        {
+            case Key.LeftArrow: return "←";
+            case Key.RightArrow: return "→";
+            case Key.UpArrow: return "↑";
+            case Key.DownArrow: return "↓";
+            default: return key.ToString();
         }
     }
 
@@ -427,7 +586,7 @@ public class YubisumaMatch : MonoBehaviour
         bigStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
         bigStyle.normal.textColor = Color.white;
 
-        subStyle = new GUIStyle(bigStyle);
+        subStyle = new GUIStyle(bigStyle) { alignment = TextAnchor.UpperCenter };
         subStyle.normal.textColor = new Color(1f, 0.9f, 0.3f);
 
         turnStyle = new GUIStyle(bigStyle) { fontStyle = FontStyle.Normal };
