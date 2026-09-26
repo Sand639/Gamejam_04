@@ -17,7 +17,7 @@ using UnityEngine;
 /// </summary>
 public static class NetworkConnectSceneSetup
 {
-    private const string ScenePath = "Assets/Scenes/NetworkConnect.unity";
+    public const string ScenePath = "Assets/Scenes/NetworkConnect.unity";
 
     /// <summary>1秒あたり何回、位置などを送るか。初期値は30。増やすと反応が良くなる</summary>
     private const uint NetworkTickRate = 60;
@@ -34,9 +34,23 @@ public static class NetworkConnectSceneSetup
             return;
         }
 
+        Create();
+    }
+
+    /// <summary>
+    /// シーンが無ければ作る。ビルドのツールから呼ぶ。
+    /// 作れた（またはすでにあった）ら true を返す。
+    /// </summary>
+    public static bool EnsureScene()
+    {
+        return AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) != null || Create();
+    }
+
+    private static bool Create()
+    {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
         {
-            return;
+            return false;
         }
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -78,6 +92,7 @@ public static class NetworkConnectSceneSetup
 
         AssetDatabase.SaveAssets();
         Debug.Log("オンライン接続シーンを作りました。\nシーン: " + ScenePath);
+        return true;
     }
 
     /// <summary>ビルドの一覧に無ければ足す（ビルドした .exe で試せるように）。</summary>
