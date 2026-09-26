@@ -100,6 +100,47 @@ public class YubisumaPlayer : MonoBehaviour
         return null;
     }
 
+    /// <summary>
+    /// いま持っているスキル。持っていなければ None。
+    /// 配る・使う・もらうは <see cref="YubisumaMatch"/> が決める。
+    /// </summary>
+    public YubisumaSkillType HeldSkill { get; set; } = YubisumaSkillType.None;
+
+    /// <summary>スキルを使うキーの名前（画面の案内用）。<see cref="YubisumaMatch"/> が入れる。</summary>
+    public string SkillKeyName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 残っている手のうち、**下がっている指**（<paramref name="raised"/> が false）または
+    /// **上がっている指**（true）を、その形で固定する（コンクリ／セメント）。固定した本数を返す。
+    /// </summary>
+    public int LockHands(bool raised)
+    {
+        int count = 0;
+
+        foreach (YubisumaThumb thumb in thumbs)
+        {
+            if (IsAlive(thumb) && thumb.IsRaised == raised)
+            {
+                thumb.Lock(raised);
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>固定を全部外す。</summary>
+    public void UnlockHands()
+    {
+        foreach (YubisumaThumb thumb in thumbs)
+        {
+            if (thumb != null)
+            {
+                thumb.Unlock();
+            }
+        }
+    }
+
     /// <summary>取り除いた手も含めて、両手とも最初の状態に戻す（次のゲームを始めるとき）。</summary>
     public void RestoreHands()
     {

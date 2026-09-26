@@ -114,6 +114,7 @@ public class YubisumaThumb : MonoBehaviour
 
         IsRemoved = false;
         IsRaised = false;
+        IsLocked = false;
         frozenRaised = false;
         Display = DisplayMode.Live;
         ApplyAnimation();
@@ -122,6 +123,7 @@ public class YubisumaThumb : MonoBehaviour
     /// <summary>
     /// 見た目を握りこぶしに戻し、キーを押しても指を立てないようにする（「いっせーの」の始まり）。
     /// **キーを押しているかどうかは、見た目と関係なく覚えている。**
+    /// スキルで**固定されている指は戻さない**（上げたまま固定されていれば、立ったまま）。
     /// </summary>
     public void Hide()
     {
@@ -147,6 +149,34 @@ public class YubisumaThumb : MonoBehaviour
         ApplyAnimation();
     }
 
+    /// <summary>
+    /// スキル（コンクリ／セメント）で固定されているか。
+    /// 固定されている間は、キーを押しても離しても、指は <see cref="LockedRaised"/> のまま変わらない。
+    /// </summary>
+    public bool IsLocked { get; private set; }
+
+    /// <summary>固定されている形。true＝上げたまま（セメント）、false＝下げたまま（コンクリ）。</summary>
+    public bool LockedRaised { get; private set; }
+
+    /// <summary>指をいまの形で固定する（スキル）。<paramref name="raised"/> が true なら上げたまま。</summary>
+    public void Lock(bool raised)
+    {
+        IsLocked = true;
+        LockedRaised = raised;
+        IsRaised = raised;
+
+        if (Display == DisplayMode.Live)
+        {
+            ApplyAnimation();
+        }
+    }
+
+    /// <summary>固定を外す（キーで動かせるように戻す）。</summary>
+    public void Unlock()
+    {
+        IsLocked = false;
+    }
+
     private void Awake()
     {
         if (animator == null)
@@ -166,7 +196,7 @@ public class YubisumaThumb : MonoBehaviour
         }
 
         bool wasRaised = IsRaised;
-        IsRaised = ReadRaised();
+        IsRaised = IsLocked ? LockedRaised : ReadRaised();
 
         if (wasRaised != IsRaised && Display == DisplayMode.Live)
         {
@@ -181,7 +211,9 @@ public class YubisumaThumb : MonoBehaviour
         {
             switch (Display)
             {
-                case DisplayMode.Hidden: return false;
+                // 「いっせーの」の間は握りこぶしにする。
+                // ただしスキルで固定されている指は、固定された形のまま見せる（隠すものが無いため）
+                case DisplayMode.Hidden: return IsLocked && LockedRaised;
                 case DisplayMode.Frozen: return frozenRaised;
                 default: return IsRaised;
             }
