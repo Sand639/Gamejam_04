@@ -177,7 +177,8 @@ public class YubisumaUI : MonoBehaviour
         burstRect.sizeDelta = new Vector2(520f, 380f);
         burstRect.anchoredPosition = new Vector2(0f, 40f);
         bigText = NewText("BigText", burstRect, 60, TextAnchor.MiddleCenter, textColor, FontStyle.Bold);
-        Stretch(bigText.rectTransform, 70f, 60f);
+        // 吹き出しはふちがギザギザなので、内側に広めの余白をとる（長い言葉は小さくなって収まる）
+        Stretch(bigText.rectTransform, 110f, 80f);
         bigText.resizeTextForBestFit = true;
         bigText.verticalOverflow = VerticalWrapMode.Truncate;
         bigText.resizeTextMinSize = 24;
@@ -372,6 +373,13 @@ public class YubisumaUI : MonoBehaviour
 
         bool isReveal = !string.IsNullOrEmpty(message) && message.StartsWith(Prefix);
         string shown = isReveal ? message.Substring(Prefix.Length) : message;
+
+        // 全角の「！」は、見える部分が左に寄っていて右に空白の幅がある。
+        // そのままだと文字全体の真ん中が右にずれて、数字が左に寄って見えるので、半角の「!」にする
+        if (!string.IsNullOrEmpty(shown))
+        {
+            shown = shown.Replace('！', '!');
+        }
 
         burstObject.SetActive(!string.IsNullOrEmpty(shown));
 
