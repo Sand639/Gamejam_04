@@ -51,6 +51,12 @@ public class YubisumaFingerMosaic : MonoBehaviour
 
     private static readonly int CellPixId = Shader.PropertyToID("_CellPix");
 
+    /// <summary>
+    /// モザイクをかけるか（全部の手で共通）。<see cref="YubisumaMatch"/> のキーで切り替える。
+    /// シーンをまたいでも保つ（タイトルに戻って遊び直しても同じ）。ゲームを閉じると「あり」に戻る。
+    /// </summary>
+    public static bool MosaicOn { get; set; } = true;
+
     private Renderer mosaicRenderer;
 
     private void Awake()
@@ -75,7 +81,7 @@ public class YubisumaFingerMosaic : MonoBehaviour
 
     private void LateUpdate()
     {
-        bool show = hand != null && hand.IsShownRaised &&
+        bool show = MosaicOn && hand != null && hand.IsShownRaised &&
                     fingerRoot != null && fingerTip != null && mosaic != null;
 
         SetVisible(show);

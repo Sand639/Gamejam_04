@@ -52,6 +52,12 @@ public class YubisumaMatch : MonoBehaviour
     [Tooltip("勝負がついたあと、Enter で戻るタイトル画面のシーンの名前")]
     [SerializeField] private string titleSceneName = "Title";
 
+    [Tooltip("中指のモザイクのあり／なしを切り替えるキー（いつでも押せる）")]
+    [SerializeField] private Key mosaicToggleKey = Key.M;
+
+    [Tooltip("モザイクを切り替えたとき、画面に「モザイク：あり／なし」を出しておく時間（秒）")]
+    [SerializeField] private float mosaicNoticeSeconds = 1.5f;
+
     [Header("スキル")]
     [Tooltip("スキルを使うキー。Players と同じ順（1人目、2人目…）")]
     [SerializeField] private Key[] skillKeys = { Key.W, Key.UpArrow };
@@ -130,6 +136,9 @@ public class YubisumaMatch : MonoBehaviour
     /// **かけた人の次の番が終わるまで**続き、終わったら外す。
     /// </summary>
     private LockStage[] placedLock = new LockStage[0];
+
+    /// <summary>「モザイク：あり／なし」をいつまで出しておくか（Time.time）。</summary>
+    private float mosaicNoticeUntil = -1f;
 
     private string bigMessage = string.Empty;
     private string subMessage = string.Empty;
@@ -269,6 +278,14 @@ public class YubisumaMatch : MonoBehaviour
         if (keyboard == null)
         {
             return;
+        }
+
+        // 中指のモザイクのあり／なし（いつでも切り替えられる）
+        if (mosaicToggleKey != Key.None && keyboard[mosaicToggleKey].wasPressedThisFrame)
+        {
+            YubisumaFingerMosaic.MosaicOn = !YubisumaFingerMosaic.MosaicOn;
+            mosaicNoticeUntil = Time.time + mosaicNoticeSeconds;
+            Debug.Log($"[指スマ] モザイク：{(YubisumaFingerMosaic.MosaicOn ? "あり" : "なし")}");
         }
 
         // 勝負がついたら、Enter でタイトル画面に戻る
@@ -667,6 +684,15 @@ public class YubisumaMatch : MonoBehaviour
         {
             DrawShadowed(new Rect(0f, Screen.height - 170f * scale, Screen.width, 50f * scale),
                 ScoreText(), turnStyle);
+        }
+
+        // モザイクを切り替えた直後だけ、真ん中の大きな文字の上に出す
+        // （上の端に出すと、各プレイヤーの名前の表示と重なるため）
+        if (Time.time < mosaicNoticeUntil)
+        {
+            string key = mosaicToggleKey.ToString();
+            DrawShadowed(new Rect(0f, Screen.height * 0.5f - 130f * scale, Screen.width, 50f * scale),
+                $"モザイク：{(YubisumaFingerMosaic.MosaicOn ? "あり" : "なし")}（{key} で切り替え）", turnStyle);
         }
 
         if (!string.IsNullOrEmpty(bigMessage))
