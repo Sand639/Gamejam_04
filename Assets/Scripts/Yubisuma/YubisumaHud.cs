@@ -44,7 +44,7 @@ public class YubisumaHud : MonoBehaviour
                 continue;
             }
 
-            total += player.ShownRaisedCount;
+            total += player.RaisedCount;
             DrawPlayer(player, scale);
         }
 
@@ -81,7 +81,7 @@ public class YubisumaHud : MonoBehaviour
         }
 
         builder.AppendLine();
-        builder.Append($"あげている：{player.ShownRaisedCount} 本");
+        builder.Append($"あげている：{player.RaisedCount} 本");
 
         float margin = 16f * scale;
         GUI.Label(new Rect(area.x + margin, top + margin, area.width - margin * 2f, 120f * scale),

@@ -31,7 +31,7 @@ public class YubisumaPlayer : MonoBehaviour
 
             foreach (YubisumaThumb thumb in thumbs)
             {
-                if (IsAlive(thumb) && thumb.IsRaised)
+                if (thumb != null && thumb.IsRaised)
                 {
                     count++;
                 }
@@ -39,105 +39,5 @@ public class YubisumaPlayer : MonoBehaviour
 
             return count;
         }
-    }
-
-    /// <summary>
-    /// **見た目として**指を立てている本数（画面の表示用）。
-    /// 「いっせーの」の間は、キーを押していても 0 になる（本数がばれないように）。
-    /// </summary>
-    public int ShownRaisedCount
-    {
-        get
-        {
-            int count = 0;
-
-            foreach (YubisumaThumb thumb in thumbs)
-            {
-                if (IsAlive(thumb) && thumb.IsShownRaised)
-                {
-                    count++;
-                }
-            }
-
-            return count;
-        }
-    }
-
-    /// <summary>まだ残っている手の数。0になったら、このプレイヤーの勝ち。</summary>
-    public int RemainingHands
-    {
-        get
-        {
-            int count = 0;
-
-            foreach (YubisumaThumb thumb in thumbs)
-            {
-                if (IsAlive(thumb))
-                {
-                    count++;
-                }
-            }
-
-            return count;
-        }
-    }
-
-    /// <summary>
-    /// 手を1つ取り除く（当てたときに呼ぶ）。**右手から先に**取り除く。
-    /// 取り除いた親指を返す。もう手が無ければ null。
-    /// </summary>
-    public YubisumaThumb RemoveOneHand()
-    {
-        for (int i = thumbs.Length - 1; i >= 0; i--)
-        {
-            if (IsAlive(thumbs[i]))
-            {
-                thumbs[i].Remove();
-                return thumbs[i];
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>残っている手を全部、握りこぶしの見た目にする（「いっせーの」の始まり）。</summary>
-    public void HideHands()
-    {
-        foreach (YubisumaThumb thumb in thumbs)
-        {
-            if (IsAlive(thumb))
-            {
-                thumb.Hide();
-            }
-        }
-    }
-
-    /// <summary>残っている手を全部、いまのキーの状態で見せて止める（「いっせーの ＜数字＞！」の瞬間）。</summary>
-    public void RevealHands()
-    {
-        foreach (YubisumaThumb thumb in thumbs)
-        {
-            if (IsAlive(thumb))
-            {
-                thumb.Reveal();
-            }
-        }
-    }
-
-    /// <summary>残っている手を全部、ふだんの動き（キーに合わせてすぐ動く）に戻す。</summary>
-    public void ShowHandsLive()
-    {
-        foreach (YubisumaThumb thumb in thumbs)
-        {
-            if (IsAlive(thumb))
-            {
-                thumb.ShowLive();
-            }
-        }
-    }
-
-    private static bool IsAlive(YubisumaThumb thumb)
-    {
-        return thumb != null && !thumb.IsRemoved;
     }
 }
