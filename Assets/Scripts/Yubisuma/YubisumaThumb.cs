@@ -13,6 +13,10 @@ using UnityEngine.InputSystem;
 /// Animator の Bool パラメーター（初期値 `Raised`）を切り替えるだけなので、
 /// ポーズを変えたいときはアニメーションを差し替えればよい。
 ///
+/// **「キーを押しているか」と「見た目」は分けて持つ。**
+/// 「いっせーの」の間は <see cref="Hide"/> で見た目を握りこぶしにしておき、
+/// 「いっせーの ＜数字＞！」の瞬間に <see cref="Reveal"/> で一斉に指を立てる。
+///
 /// 上げ方は2通りから選べる。
 ///   ・Hold   … 押している間だけ上がる（指スマの実際の動きに近い）
 ///   ・Toggle … 1回押すと上がり、もう1回押すと下がる
@@ -69,13 +73,59 @@ public class YubisumaThumb : MonoBehaviour
         }
     }
 
-    private int raisedHash;
+    /// <summary>見た目（アニメーション）をどう出すか。</summary>
+    public enum DisplayMode
+    {
+        /// <summary>キーに合わせてすぐ動く（ふだん）</summary>
+        Live,
 
-    /// <summary>この手を取り除く。以後は入力を受けず、本数にも数えない。</summary>
+        /// <summary>キーを押していても握りこぶしのまま（「いっせーの」の間）</summary>
+        Hidden,
+
+        /// <summary><see cref="Reveal"/> した瞬間の形のまま止める（結果を出している間）</summary>
+        Frozen,
+    }
+
+    /// <summary>いまの見た目の出し方。</summary>
+    public DisplayMode Display { get; private set; } = DisplayMode.Live;
+
+    private int raisedHash;
+    private bool frozenRaised;
+
+    /// <summary>
+    /// この手を取り除く。以後は入力を受けず、本数にも数えない。
+    /// **見た目はそのまま残す**（立てた指のまま画面の外へ流れていくように）。
+    /// </summary>
     public void Remove()
     {
         IsRemoved = true;
-        IsRaised = false;
+    }
+
+    /// <summary>
+    /// 見た目を握りこぶしに戻し、キーを押しても指を立てないようにする（「いっせーの」の始まり）。
+    /// **キーを押しているかどうかは、見た目と関係なく覚えている。**
+    /// </summary>
+    public void Hide()
+    {
+        Display = DisplayMode.Hidden;
+        ApplyAnimation();
+    }
+
+    /// <summary>
+    /// いまキーを押していれば指を立て、**その形のまま止める**（「いっせーの ＜数字＞！」の瞬間）。
+    /// 全員に同時に呼べば、指が一斉に立つ。
+    /// </summary>
+    public void Reveal()
+    {
+        frozenRaised = IsRaised;
+        Display = DisplayMode.Frozen;
+        ApplyAnimation();
+    }
+
+    /// <summary>ふだんの動き（キーに合わせてすぐ動く）に戻す。</summary>
+    public void ShowLive()
+    {
+        Display = DisplayMode.Live;
         ApplyAnimation();
     }
 
@@ -99,9 +149,23 @@ public class YubisumaThumb : MonoBehaviour
         bool wasRaised = IsRaised;
         IsRaised = ReadRaised();
 
-        if (wasRaised != IsRaised)
+        if (wasRaised != IsRaised && Display == DisplayMode.Live)
         {
             ApplyAnimation();
+        }
+    }
+
+    /// <summary>見た目として指を立てているか（画面の本数の表示に使う）。</summary>
+    public bool IsShownRaised
+    {
+        get
+        {
+            switch (Display)
+            {
+                case DisplayMode.Hidden: return false;
+                case DisplayMode.Frozen: return frozenRaised;
+                default: return IsRaised;
+            }
         }
     }
 
@@ -109,7 +173,7 @@ public class YubisumaThumb : MonoBehaviour
     {
         if (animator != null && animator.runtimeAnimatorController != null)
         {
-            animator.SetBool(raisedHash, IsRaised);
+            animator.SetBool(raisedHash, IsShownRaised);
         }
     }
 
