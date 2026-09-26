@@ -57,6 +57,9 @@ public class YubisumaThumb : MonoBehaviour
     /// <summary>この指が付いている手（手ごと動かすときに使う）。</summary>
     public Transform Hand => transform;
 
+    /// <summary>この指を上げるキー（画面にキーの絵を出すのに使う）。</summary>
+    public Key BoundKey => key;
+
     /// <summary>画面の案内に出すキーの名前。</summary>
     public string KeyName
     {

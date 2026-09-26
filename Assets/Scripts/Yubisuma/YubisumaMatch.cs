@@ -178,6 +178,42 @@ public class YubisumaMatch : MonoBehaviour
 
     private YubisumaPlayer CurrentPlayer => players.Length > 0 ? players[turnIndex] : null;
 
+    // ------------------------------------------------------------
+    // 画面（YubisumaUI）が読むための情報
+    // ------------------------------------------------------------
+
+    /// <summary>参加しているプレイヤー（番の順）。</summary>
+    public YubisumaPlayer[] Players => players;
+
+    /// <summary>何ゲーム先に取ったら勝ちか。</summary>
+    public int WinsToWinMatch => winsToWinMatch;
+
+    /// <summary><paramref name="playerIndex"/> 番目のプレイヤーが取ったゲームの数。</summary>
+    public int WinsOf(int playerIndex) => playerIndex < wins.Length ? wins[playerIndex] : 0;
+
+    /// <summary>いま番のプレイヤーの番号（Players の何番目か）。</summary>
+    public int TurnIndex => turnIndex;
+
+    /// <summary>番のプレイヤーが数字やスキルを選べる（スペースを待っている）ところか。</summary>
+    public bool IsWaitingCall => phase == Phase.WaitingCall;
+
+    /// <summary>勝負がついたか。</summary>
+    public bool IsGameOver => phase == Phase.GameOver;
+
+    /// <summary>真ん中に大きく出す文字（「いっせーの 2！」など）。無ければ空。</summary>
+    public string BigMessage => bigMessage;
+
+    /// <summary>大きな文字の下に出す文字（結果など）。無ければ空。</summary>
+    public string SubMessage => subMessage;
+
+    /// <summary><paramref name="playerIndex"/> 番目のプレイヤーのスキルのキー。</summary>
+    public Key SkillKeyOf(int playerIndex) => playerIndex < skillKeys.Length ? skillKeys[playerIndex] : Key.None;
+
+    /// <summary>モザイクを切り替えた直後に出す文字。出さないときは空。</summary>
+    public string MosaicNotice => Time.time < mosaicNoticeUntil
+        ? $"モザイク：{(YubisumaFingerMosaic.MosaicOn ? "あり" : "なし")}（{mosaicToggleKey} で切り替え）"
+        : string.Empty;
+
     private IEnumerator Start()
     {
         PrepareVoices();
@@ -485,10 +521,7 @@ public class YubisumaMatch : MonoBehaviour
 
         result.Append(hit ? $"{total}本！ {caller.DisplayName} 当たり！" : $"{total}本… はずれ");
 
-        if (skill != YubisumaSkillType.None)
-        {
-            result.Append($"\n{YubisumaSkill.NameOf(skill)}：{YubisumaSkill.DescriptionOf(skill)}");
-        }
+        // スキルの説明は、ここ（真ん中）には出さない。持っているスキルは画面の下に出している
 
         if (winsGame)
         {
@@ -853,11 +886,16 @@ public class YubisumaMatch : MonoBehaviour
     }
 
     // ------------------------------------------------------------
-    // 表示（仮のもの）
+    // 表示（仮のもの）。画面の UI（YubisumaUI）があるときは、そちらが描くので出さない
     // ------------------------------------------------------------
 
     private void OnGUI()
     {
+        if (YubisumaUI.IsShowing)
+        {
+            return;
+        }
+
         EnsureStyles();
 
         float scale = Mathf.Max(0.5f, uiScale * Mathf.Min(Screen.width / 1920f, Screen.height / 1080f));

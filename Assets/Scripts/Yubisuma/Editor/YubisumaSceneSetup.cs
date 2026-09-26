@@ -158,6 +158,9 @@ public static class YubisumaSceneSetup
 
         matchSerialized.ApplyModifiedPropertiesWithoutUndo();
 
+        // 画面の UI（名前・勝ち数の丸・キーの絵・スキルの欄・吹き出し）
+        YubisumaUISetup.Attach(match);
+
         EditorSceneManager.SaveScene(scene, ScenePath);
         AddToBuildSettings();
         AssetDatabase.SaveAssets();

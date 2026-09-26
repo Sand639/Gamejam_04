@@ -29,6 +29,12 @@ public class YubisumaHud : MonoBehaviour
 
     private void OnGUI()
     {
+        // 画面の UI（YubisumaUI）があるときは、そちらが描くので出さない
+        if (YubisumaUI.IsShowing)
+        {
+            return;
+        }
+
         EnsureStyles();
 
         float scale = Mathf.Max(0.5f, uiScale * Mathf.Min(Screen.width / 1920f, Screen.height / 1080f));
