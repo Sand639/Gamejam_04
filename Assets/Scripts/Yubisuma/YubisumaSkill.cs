@@ -43,9 +43,17 @@ public static class YubisumaSkill
         YubisumaSkillType.Thunder,
     };
 
-    /// <summary>ランダムに1つ選ぶ。</summary>
-    public static YubisumaSkillType Random()
+    /// <summary>
+    /// ランダムに1つ選ぶ。
+    /// <paramref name="fixedSkill"/> が None 以外なら、ランダムにせずそれを返す（テスト用）。
+    /// </summary>
+    public static YubisumaSkillType Random(YubisumaSkillType fixedSkill = YubisumaSkillType.None)
     {
+        if (fixedSkill != YubisumaSkillType.None)
+        {
+            return fixedSkill;
+        }
+
         return All[UnityEngine.Random.Range(0, All.Length)];
     }
 
@@ -80,6 +88,21 @@ public static class YubisumaSkill
     }
 
     /// <summary>
+    /// このスキルを使った番に**宣言したことになる数字**。
+    /// ピースは2、サンダーは3を宣言するスキルなので、数字キーに関係なくその数字になる。
+    /// それ以外は、数字キーで指定していた数字のまま。
+    /// </summary>
+    public static int DeclaredNumberOf(YubisumaSkillType skill, int calledNumber)
+    {
+        switch (skill)
+        {
+            case YubisumaSkillType.Piece: return 2;
+            case YubisumaSkillType.Thunder: return 3;
+            default: return calledNumber;
+        }
+    }
+
+    /// <summary>
     /// このスキルを使った番が当たりかどうか。
     /// イーブン・オッズは本数の偶数／奇数で、それ以外は「宣言した数字と同じか」で決める。
     /// </summary>
@@ -93,14 +116,12 @@ public static class YubisumaSkill
         }
     }
 
-    /// <summary>当たったとき、そのゲームにすぐ勝つか（ピースは2、サンダーは3を宣言していたとき）。</summary>
-    public static bool WinsGameOnHit(YubisumaSkillType skill, int calledNumber)
+    /// <summary>
+    /// 当たったとき、そのゲームにすぐ勝つか（ピース・サンダー）。
+    /// 宣言する数字は <see cref="DeclaredNumberOf"/> で自動で決まる（ピースは2、サンダーは3）。
+    /// </summary>
+    public static bool WinsGameOnHit(YubisumaSkillType skill)
     {
-        switch (skill)
-        {
-            case YubisumaSkillType.Piece: return calledNumber == 2;
-            case YubisumaSkillType.Thunder: return calledNumber == 3;
-            default: return false;
-        }
+        return skill == YubisumaSkillType.Piece || skill == YubisumaSkillType.Thunder;
     }
 }

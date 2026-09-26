@@ -53,6 +53,9 @@ public class YubisumaMatch : MonoBehaviour
     [Tooltip("スキルを使うキー。Players と同じ順（1人目、2人目…）")]
     [SerializeField] private Key[] skillKeys = { Key.W, Key.UpArrow };
 
+    [Tooltip("テスト用。None 以外にすると、配るスキルともらうスキルが全部これになる（ランダムにしない）。本番では None にしておく")]
+    [SerializeField] private YubisumaSkillType testSkill = YubisumaSkillType.None;
+
     [Header("時間（秒）")]
     [Tooltip("「指スマスタート！」や「○ゲーム目」を出しておく時間")]
     [SerializeField] private float introSeconds = 1.5f;
@@ -130,7 +133,7 @@ public class YubisumaMatch : MonoBehaviour
         // スキルを1つずつ配る
         for (int i = 0; i < players.Length; i++)
         {
-            players[i].HeldSkill = YubisumaSkill.Random();
+            players[i].HeldSkill = YubisumaSkill.Random(testSkill);
             players[i].SkillKeyName = i < skillKeys.Length ? KeyLabel(skillKeys[i]) : string.Empty;
             Debug.Log($"[指スマ] {players[i].DisplayName} にスキル「{YubisumaSkill.NameOf(players[i].HeldSkill)}」を配った");
         }
@@ -342,12 +345,14 @@ public class YubisumaMatch : MonoBehaviour
         int total = CountRaised();
 
         // 当たりかどうか。イーブン・オッズを使っていれば偶数／奇数で決まる
-        bool hit = YubisumaSkill.IsHit(skill, total, calledNumber);
+        // ピースは2、サンダーは3を宣言したことになる（数字キーは関係ない）。それ以外は数字キーの数字
+        int declared = YubisumaSkill.DeclaredNumberOf(skill, calledNumber);
+        bool hit = YubisumaSkill.IsHit(skill, total, declared);
 
         // ピース（2）・サンダー（3）で当てたら、そのゲームにすぐ勝つ
-        bool winsGame = hit && YubisumaSkill.WinsGameOnHit(skill, calledNumber);
+        bool winsGame = hit && YubisumaSkill.WinsGameOnHit(skill);
 
-        Debug.Log($"[指スマ] {caller.DisplayName} の番：指定 {calledNumber} ／ 上がっていた本数 {total} ／ スキル {YubisumaSkill.NameOf(skill)} → {(hit ? "当たり" : "はずれ")}{(winsGame ? "（ゲームに勝ち）" : string.Empty)}");
+        Debug.Log($"[指スマ] {caller.DisplayName} の番：宣言 {declared} ／ 上がっていた本数 {total} ／ スキル {YubisumaSkill.NameOf(skill)} → {(hit ? "当たり" : "はずれ")}{(winsGame ? "（ゲームに勝ち）" : string.Empty)}");
 
         System.Text.StringBuilder result = new System.Text.StringBuilder();
 
@@ -356,7 +361,7 @@ public class YubisumaMatch : MonoBehaviour
         if (skill != YubisumaSkillType.None &&
             skill != YubisumaSkillType.Even && skill != YubisumaSkillType.Odds)
         {
-            result.Append($"宣言 {calledNumber} → ");
+            result.Append($"宣言 {declared} → ");
         }
 
         result.Append(hit ? $"{total}本！ {caller.DisplayName} 当たり！" : $"{total}本… はずれ");
@@ -409,7 +414,7 @@ public class YubisumaMatch : MonoBehaviour
                     continue;
                 }
 
-                players[i].HeldSkill = YubisumaSkill.Random();
+                players[i].HeldSkill = YubisumaSkill.Random(testSkill);
                 result.Append($"\n{players[i].DisplayName} はスキル「{YubisumaSkill.NameOf(players[i].HeldSkill)}」を手に入れた");
                 Debug.Log($"[指スマ] {players[i].DisplayName} がスキル「{YubisumaSkill.NameOf(players[i].HeldSkill)}」を手に入れた");
             }
