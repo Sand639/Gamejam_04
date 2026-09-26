@@ -7,8 +7,8 @@ using UnityEngine.InputSystem;
 ///
 ///   ① シーンが始まったら「指スマスタート！」を出す
 ///   ② 番のプレイヤーが**数字キー（0～4）**で本数を指定する（画面には出さない。最後に押した数字を覚えておく）
-///   ③ **スペース**で「いっせーの」→ 少し遅れて「いっせーのせ！」
-///   ④ 「せ！」の瞬間に上がっている親指の合計が、指定した数と同じなら**当たり**。
+///   ③ **スペース**で「いっせーの」→ 少し遅れて「いっせーの ＜指定した数字＞！」
+///   ④ 数字を出した瞬間に上がっている親指の合計が、指定した数と同じなら**当たり**。
 ///      番のプレイヤーの手を1つ、下へ流して画面の外へ出し、消す
 ///   ⑤ 当たり・はずれに関係なく、**いっせーのごとに番を交代**する
 ///   ⑥ 手が無くなったプレイヤーの勝ち
@@ -23,7 +23,7 @@ public class YubisumaMatch : MonoBehaviour
         /// <summary>番のプレイヤーの指定と、スペースを待っている</summary>
         WaitingCall,
 
-        /// <summary>「いっせーの」～「せ！」～結果を出している</summary>
+        /// <summary>「いっせーの」～「いっせーの ＜数字＞！」～結果を出している</summary>
         Calling,
 
         /// <summary>勝負がついた</summary>
@@ -37,10 +37,10 @@ public class YubisumaMatch : MonoBehaviour
     [Tooltip("「指スマスタート！」を出しておく時間")]
     [SerializeField] private float introSeconds = 1.5f;
 
-    [Tooltip("「いっせーの」から「せ！」までの遅れ")]
-    [SerializeField] private float callDelaySeconds = 1.0f;
+    [Tooltip("「いっせーの」から「いっせーの ＜数字＞！」までの遅れ")]
+    [SerializeField] private float callDelaySeconds = 1.5f;
 
-    [Tooltip("「いっせーのせ！」と結果を出しておく時間。この間は次のスペースを受け付けない")]
+    [Tooltip("「いっせーの ＜数字＞！」と結果を出しておく時間。この間は次のスペースを受け付けない")]
     [SerializeField] private float resultSeconds = 1.5f;
 
     [Header("当てたときの手の動き")]
@@ -132,9 +132,10 @@ public class YubisumaMatch : MonoBehaviour
 
         yield return new WaitForSeconds(callDelaySeconds);
 
-        bigMessage = "いっせーのせ！";
+        // 「せ！」の代わりに、番のプレイヤーが指定していた数字を出す（例：いっせーの 2！）
+        bigMessage = $"いっせーの {calledNumber}！";
 
-        // ★「せ！」の瞬間に上がっている本数で決める
+        // ★数字を出した瞬間に上がっている本数で決める
         int total = CountRaised();
         bool hit = total == calledNumber;
 

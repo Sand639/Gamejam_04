@@ -1219,7 +1219,7 @@ MonoBehaviour:
   - {fileID: 993791254}
   - {fileID: 1201816863}
   introSeconds: 1.5
-  callDelaySeconds: 1
+  callDelaySeconds: 1.5
   resultSeconds: 1.5
   scrollDistance: 8
   scrollSeconds: 1
