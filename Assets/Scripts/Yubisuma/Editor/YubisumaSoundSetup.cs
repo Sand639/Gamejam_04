@@ -7,7 +7,7 @@ using UnityEngine;
 ///
 /// Unityのメニュー「Tools > Gamejam04 > 指スマの効果音を割り当てる」から実行できる。
 ///
-/// `Assets/Audio/SE/` の音声を、`YubisumaMatch` の各項目に入れる。
+/// `Assets/Audio/NEWSE/` の音声を、`YubisumaMatch` の各項目に入れる。
 ///
 ///   ・「いっせーの」の声 … いっせーの改善.wav
 ///   ・数字の声（0～4）  … 0.wav ～ 4.wav
@@ -24,7 +24,7 @@ using UnityEngine;
 public static class YubisumaSoundSetup
 {
     private const string ScenePath = "Assets/Scenes/Yubisuma.unity";
-    private const string SeFolder = "Assets/Audio/SE";
+    private const string SeFolder = "Assets/Audio/NEWSE";
 
     private const string IsseenoVoicePath = SeFolder + "/いっせーの改善.wav";
 
