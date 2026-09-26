@@ -42,6 +42,20 @@ public static class YubisumaSceneSetup
             return;
         }
 
+        Create();
+    }
+
+    /// <summary>
+    /// 確認を出さずに作り直す（コマンドから呼ぶ入口）。
+    ///   -executeMethod YubisumaSceneSetup.CreateSceneFromCommandLine
+    /// </summary>
+    public static void CreateSceneFromCommandLine()
+    {
+        Create();
+    }
+
+    private static void Create()
+    {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
         {
             return;
@@ -77,6 +91,16 @@ public static class YubisumaSceneSetup
         playersProperty.GetArrayElementAtIndex(0).objectReferenceValue = player1;
         playersProperty.GetArrayElementAtIndex(1).objectReferenceValue = player2;
         hudSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+        // 試合の流れ（指スマスタート → 数字で指定 → スペースでいっせーの → 判定 → 番の交代）
+        GameObject matchObject = new GameObject("YubisumaMatch");
+        YubisumaMatch match = matchObject.AddComponent<YubisumaMatch>();
+        SerializedObject matchSerialized = new SerializedObject(match);
+        SerializedProperty matchPlayers = matchSerialized.FindProperty("players");
+        matchPlayers.arraySize = 2;
+        matchPlayers.GetArrayElementAtIndex(0).objectReferenceValue = player1;
+        matchPlayers.GetArrayElementAtIndex(1).objectReferenceValue = player2;
+        matchSerialized.ApplyModifiedPropertiesWithoutUndo();
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         AddToBuildSettings();

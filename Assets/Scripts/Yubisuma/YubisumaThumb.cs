@@ -46,6 +46,21 @@ public class YubisumaThumb : MonoBehaviour
     /// <summary>いま上げているか。</summary>
     public bool IsRaised { get; private set; }
 
+    /// <summary>
+    /// 当てられて取り除かれたか。取り除かれた手は、キーを押しても動かず、本数にも数えない。
+    /// </summary>
+    public bool IsRemoved { get; private set; }
+
+    /// <summary>この親指が付いている手（握りこぶしごと動かすときに使う）。</summary>
+    public Transform Hand => transform.parent != null ? transform.parent : transform;
+
+    /// <summary>この手を取り除く。以後は入力を受けず、本数にも数えない。</summary>
+    public void Remove()
+    {
+        IsRemoved = true;
+        IsRaised = false;
+    }
+
     /// <summary>画面の案内に出すキーの名前。</summary>
     public string KeyName
     {
@@ -70,6 +85,11 @@ public class YubisumaThumb : MonoBehaviour
 
     private void Update()
     {
+        if (IsRemoved)
+        {
+            return;
+        }
+
         bool wasRaised = IsRaised;
         IsRaised = ReadRaised();
 
