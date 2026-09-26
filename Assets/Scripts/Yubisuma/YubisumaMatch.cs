@@ -95,6 +95,15 @@ public class YubisumaMatch : MonoBehaviour
     [Tooltip("数字の声。0～4 の順に入れる（0番目が「0」）")]
     [SerializeField] private AudioClip[] numberVoices = new AudioClip[MaxCall + 1];
 
+    [Tooltip("当てられた手が画面の外へ流れていくときの音。ここに入れたものからランダムで1つ鳴らす")]
+    [SerializeField] private AudioClip[] handOutSounds = new AudioClip[0];
+
+    /// <summary>
+    /// 手が流れていくときの音を鳴らす係。数字の声と同時に鳴るので、声を止めないよう別に持つ。
+    /// シーンに置かなくてよいよう、始まったときに自動で作る。
+    /// </summary>
+    private AudioSource effectSource;
+
     [Header("BGM を下げる（声を聞こえやすくする）")]
     [Tooltip("「いっせーの」から結果が出終わるまで、BGM の音量をここまで下げる（元の音量に対する割合）。1 なら下げない")]
     [Range(0f, 1f)]
@@ -500,6 +509,9 @@ public class YubisumaMatch : MonoBehaviour
             {
                 StartCoroutine(ScrollOutAndHide(removed.Hand));
             }
+
+            // 何本流れても、音は1回だけ
+            PlayHandOutSound();
         }
         else if (hit)
         {
@@ -508,6 +520,7 @@ public class YubisumaMatch : MonoBehaviour
             if (removed != null)
             {
                 StartCoroutine(ScrollOutAndHide(removed.Hand));
+                PlayHandOutSound();
             }
         }
 
@@ -586,6 +599,36 @@ public class YubisumaMatch : MonoBehaviour
             {
                 clip.LoadAudioData();
             }
+        }
+
+        foreach (AudioClip clip in handOutSounds)
+        {
+            if (clip != null)
+            {
+                clip.LoadAudioData();
+            }
+        }
+
+        // 手が流れていくときの音の係。声と同じ設定（2D の音）で、声とは別に鳴らす
+        effectSource = gameObject.AddComponent<AudioSource>();
+        effectSource.playOnAwake = false;
+        effectSource.spatialBlend = 0f;
+    }
+
+    /// <summary>手が流れていくときの音を、入っているものからランダムで1つ鳴らす。</summary>
+    private void PlayHandOutSound()
+    {
+        if (effectSource == null || handOutSounds == null || handOutSounds.Length == 0)
+        {
+            return;
+        }
+
+        AudioClip clip = handOutSounds[Random.Range(0, handOutSounds.Length)];
+
+        if (clip != null)
+        {
+            effectSource.PlayOneShot(clip);
+            Debug.Log($"[指スマ] 手が流れていく音：{clip.name}");
         }
     }
 

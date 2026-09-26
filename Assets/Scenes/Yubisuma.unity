@@ -750,6 +750,8 @@ MonoBehaviour:
   - {fileID: 495062346}
   winsToWinMatch: 2
   titleSceneName: Title
+  mosaicToggleKey: 27
+  mosaicNoticeSeconds: 1.5
   skillKeys: 250000003f000000
   testSkill: 0
   introSeconds: 1.5
@@ -766,6 +768,11 @@ MonoBehaviour:
   - {fileID: 8300000, guid: ed71c25a602c8824b800cfd71d4cf0da, type: 3}
   - {fileID: 8300000, guid: fa760acfe789b1a449f8ca071f148d01, type: 3}
   - {fileID: 8300000, guid: 3954903ecead80c48a517a089f9b2e4e, type: 3}
+  handOutSounds:
+  - {fileID: 8300000, guid: 0ef9d887acd671f47a09e0a72ac19995, type: 3}
+  - {fileID: 8300000, guid: a594bfe5bd417f449970fcfbf6f438ee, type: 3}
+  bgmDuckRatio: 0.3
+  bgmFadeSeconds: 0.2
   uiScale: 1.5
 --- !u!4 &563401017
 Transform:
