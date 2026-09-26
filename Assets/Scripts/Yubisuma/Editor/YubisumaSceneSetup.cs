@@ -15,7 +15,7 @@ using UnityEngine.InputSystem;
 /// ・キーは合計4つ
 ///     プレイヤー1 … 左手 A ／ 右手 D
 ///     プレイヤー2 … 左手 ← ／ 右手 →
-/// ・押している間、親指が上がる
+/// ・押している間、中指が立つ（Hand_Fuck のアニメーション）
 ///
 /// 2人の手は**離れた場所に置き、それぞれ専用のカメラで映す**。
 /// カメラの Viewport Rect で、画面の左半分・右半分に割り当てている。
@@ -31,11 +31,18 @@ public static class YubisumaSceneSetup
     private const string RightHandPrefabPath = "Assets/Prefab/RightHand.prefab";
 
     /// <summary>
-    /// 指スマ用の手のアニメーション。**握りこぶし（Hand_Idle）だけ**を持つ。
-    /// 元の HandController は Idle から中指のポーズへ自動で移るため、指スマでは使わない。
+    /// 指スマ用の手のアニメーション。**キーで握りこぶし（Hand_Idle）⇔ 中指（Hand_Fuck）を切り替える**。
+    /// 元の HandController はキーに関係なく Idle から中指のポーズへ移るため、指スマでは使わない。
     /// </summary>
     private const string HandControllerPath = "Assets/Animations/Hand/YubisumaHand.controller";
     private const string IdleClipPath = "Assets/Animations/Hand/Hand_Idle.anim";
+    private const string RaisedClipPath = "Assets/Animations/Hand/Hand_Fuck.anim";
+
+    /// <summary>上げているかを伝える Animator のパラメーター名</summary>
+    private const string RaisedParameter = "Raised";
+
+    /// <summary>握りこぶし⇔中指の切り替えにかける時間（秒）</summary>
+    private const float SwitchSeconds = 0.08f;
 
     /// <summary>2人の手をどれだけ離して置くか（互いのカメラに映り込まないように）</summary>
     private const float PlayerSpacing = 40f;
@@ -185,7 +192,7 @@ public static class YubisumaSceneSetup
     }
 
     /// <summary>
-    /// 手のプレハブを1つ置き、親指を動かす部品を付ける。
+    /// 手のプレハブを1つ置き、指を上げ下げする部品を付ける。
     /// プレハブとのつながりは残す（プレハブを直せば、このシーンの手にも反映される）。
     /// </summary>
     private static YubisumaThumb CreateHand(
@@ -194,28 +201,19 @@ public static class YubisumaSceneSetup
         GameObject hand = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
         hand.transform.localPosition = new Vector3(x, 0f, 0f);
 
-        // 握りこぶしのままにする（元のコントローラーは中指のポーズへ移ってしまう）
+        // キーで握りこぶし⇔中指を切り替えられるコントローラーにする
+        // （元のコントローラーは、キーに関係なく中指のポーズへ移ってしまう）
         Animator animator = hand.GetComponentInChildren<Animator>();
         if (animator != null && handController != null)
         {
             animator.runtimeAnimatorController = handController;
         }
 
-        Transform thumbRoot = FindDeep(hand.transform, "Thumb");
-        Transform thumbMiddle = FindDeep(hand.transform, "Thumb2");
-        Transform thumbTip = thumbMiddle != null && thumbMiddle.childCount > 0 ? thumbMiddle.GetChild(0) : null;
-
-        if (thumbRoot == null || thumbTip == null)
-        {
-            Debug.LogError($"{hand.name} に親指の骨（Thumb／Thumb2）が見つかりません。");
-        }
-
         YubisumaThumb thumb = hand.AddComponent<YubisumaThumb>();
         SerializedObject serialized = new SerializedObject(thumb);
         serialized.FindProperty("key").intValue = (int)key;
-        serialized.FindProperty("thumbRoot").objectReferenceValue = thumbRoot;
-        serialized.FindProperty("thumbMiddle").objectReferenceValue = thumbMiddle;
-        serialized.FindProperty("thumbTip").objectReferenceValue = thumbTip;
+        serialized.FindProperty("animator").objectReferenceValue = animator;
+        serialized.FindProperty("raisedParameter").stringValue = RaisedParameter;
         serialized.ApplyModifiedPropertiesWithoutUndo();
 
         return thumb;
@@ -225,42 +223,67 @@ public static class YubisumaSceneSetup
     // 補助
     // ------------------------------------------------------------
 
-    /// <summary>握りこぶし（Hand_Idle）だけのアニメーションを用意する。すでにあればそれを使う。</summary>
+    /// <summary>
+    /// 指スマ用の手のアニメーションを用意する。
+    ///
+    ///   握りこぶし（Hand_Idle） ⇔ 中指を立てる（Hand_Fuck）
+    ///
+    /// Bool の <see cref="RaisedParameter"/> が ON で中指、OFF で握りこぶしへ、すぐに切り替わる。
+    /// すでにあって <see cref="RaisedParameter"/> を持っていれば、それをそのまま使う（手で調整した内容を消さないため）。
+    /// </summary>
     private static RuntimeAnimatorController EnsureHandController()
     {
         AnimatorController existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(HandControllerPath);
         if (existing != null)
         {
-            return existing;
+            foreach (AnimatorControllerParameter parameter in existing.parameters)
+            {
+                if (parameter.name == RaisedParameter)
+                {
+                    return existing;
+                }
+            }
+
+            // 前の版（握りこぶしだけ）のものは作り直す
+            AssetDatabase.DeleteAsset(HandControllerPath);
         }
 
         AnimationClip idle = AssetDatabase.LoadAssetAtPath<AnimationClip>(IdleClipPath);
-        if (idle == null)
+        AnimationClip raised = AssetDatabase.LoadAssetAtPath<AnimationClip>(RaisedClipPath);
+        if (idle == null || raised == null)
         {
-            Debug.LogWarning($"{IdleClipPath} が見つかりません。手はプレハブのアニメーションのまま動きます。");
+            Debug.LogWarning($"{IdleClipPath} か {RaisedClipPath} が見つかりません。手はプレハブのアニメーションのまま動きます。");
             return null;
         }
 
-        return AnimatorController.CreateAnimatorControllerAtPathWithClip(HandControllerPath, idle);
+        AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(HandControllerPath);
+        controller.AddParameter(RaisedParameter, AnimatorControllerParameterType.Bool);
+
+        AnimatorStateMachine machine = controller.layers[0].stateMachine;
+        AnimatorState idleState = machine.AddState("Hand_Idle");
+        idleState.motion = idle;
+        AnimatorState raisedState = machine.AddState("Hand_Fuck");
+        raisedState.motion = raised;
+        machine.defaultState = idleState;
+
+        AddSwitch(idleState, raisedState, AnimatorConditionMode.If);
+        AddSwitch(raisedState, idleState, AnimatorConditionMode.IfNot);
+
+        AssetDatabase.SaveAssets();
+        return controller;
     }
 
-    private static Transform FindDeep(Transform parent, string name)
+    /// <summary>
+    /// パラメーターで切り替わる道を1本足す。
+    /// **待たずに（Exit Time なし）、短い時間でなめらかに**移る。
+    /// </summary>
+    private static void AddSwitch(AnimatorState from, AnimatorState to, AnimatorConditionMode mode)
     {
-        if (parent.name == name)
-        {
-            return parent;
-        }
-
-        foreach (Transform child in parent)
-        {
-            Transform found = FindDeep(child, name);
-            if (found != null)
-            {
-                return found;
-            }
-        }
-
-        return null;
+        AnimatorStateTransition transition = from.AddTransition(to);
+        transition.hasExitTime = false;
+        transition.hasFixedDuration = true;
+        transition.duration = SwitchSeconds;
+        transition.AddCondition(mode, 0f, RaisedParameter);
     }
 
     private static void AddToBuildSettings()
