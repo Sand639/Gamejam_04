@@ -130,6 +130,9 @@ public class YubisumaMatch : MonoBehaviour
     /// <summary>プレイヤーごとの、取ったゲームの数。</summary>
     private int[] wins = new int[0];
 
+    /// <summary>「○ゲーム目」の下に、ランダムで決まった先攻を出すか（1ゲーム目だけ）。</summary>
+    private bool showFirstPlayer;
+
     /// <summary>いま何ゲーム目か（1から）。</summary>
     private int gameNumber = 1;
 
@@ -220,6 +223,11 @@ public class YubisumaMatch : MonoBehaviour
         wins = new int[players.Length];
         placedLock = new LockStage[players.Length];
 
+        // 先攻（1ゲーム目の最初の番）はランダムで決める。2ゲーム目からは取られた側から
+        turnIndex = Random.Range(0, players.Length);
+        showFirstPlayer = true;
+        Debug.Log($"[指スマ] 先攻は {players[turnIndex].DisplayName}");
+
         // スキルを1つずつ配る
         for (int i = 0; i < players.Length; i++)
         {
@@ -242,7 +250,10 @@ public class YubisumaMatch : MonoBehaviour
     {
         phase = Phase.Intro;
         bigMessage = $"{gameNumber}ゲーム目";
-        subMessage = string.Empty;
+
+        // 1ゲーム目だけ、ランダムで決まった先攻を知らせる
+        subMessage = showFirstPlayer ? $"先攻：{players[turnIndex].DisplayName}" : string.Empty;
+        showFirstPlayer = false;
 
         yield return new WaitForSeconds(introSeconds);
 
@@ -511,15 +522,24 @@ public class YubisumaMatch : MonoBehaviour
 
         System.Text.StringBuilder result = new System.Text.StringBuilder();
 
+        bool lockSkill = skill == YubisumaSkillType.Concrete || skill == YubisumaSkillType.Cement;
+
         // スキル名を出したときは数字が見えないので、宣言した数字も添える
-        // （イーブン・オッズは数字を使わないので添えない）
-        if (skill != YubisumaSkillType.None &&
-            skill != YubisumaSkillType.Even && skill != YubisumaSkillType.Odds)
+        // （イーブン・オッズ・コンクリ・セメントは数字を使わないので添えない）
+        if (skill == YubisumaSkillType.Piece || skill == YubisumaSkillType.Thunder)
         {
             result.Append($"宣言 {declared} → ");
         }
 
-        result.Append(hit ? $"{total}本！ {caller.DisplayName} 当たり！" : $"{total}本… はずれ");
+        if (lockSkill)
+        {
+            // コンクリ・セメントの番は数字を宣言していないので、当たり・はずれは無い（本数だけ出す）
+            result.Append($"{total}本");
+        }
+        else
+        {
+            result.Append(hit ? $"{total}本！ {caller.DisplayName} 当たり！" : $"{total}本… はずれ");
+        }
 
         // スキルの説明は、ここ（真ん中）には出さない。持っているスキルは画面の下に出している
 
