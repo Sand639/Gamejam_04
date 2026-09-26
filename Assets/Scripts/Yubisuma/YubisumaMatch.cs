@@ -321,7 +321,7 @@ public class YubisumaMatch : MonoBehaviour
 
     /// <summary>
     /// 数字キーを読む。**最後に押された数字を覚えておく。**
-    /// 0～4 はそのまま、5～9 は 0 にする。テンキーも使える。
+    /// 0～4 はそのまま、5～9 は 0 にする。テンキーも使える。0 は Q でも押せる。
     /// </summary>
     private void ReadNumberKeys(Keyboard keyboard)
     {
@@ -330,8 +330,12 @@ public class YubisumaMatch : MonoBehaviour
             // キーの並びは 1～9 の次に 0 が来る（テンキーは 0～9 の順）
             Key digitKey = digit == 0 ? Key.Digit0 : Key.Digit1 + (digit - 1);
 
+            // 0 は Q でも押せる
+            bool alsoQ = digit == 0 && keyboard.qKey.wasPressedThisFrame;
+
             if (keyboard[digitKey].wasPressedThisFrame ||
-                keyboard[Key.Numpad0 + digit].wasPressedThisFrame)
+                keyboard[Key.Numpad0 + digit].wasPressedThisFrame ||
+                alsoQ)
             {
                 calledNumber = digit <= MaxCall ? digit : 0;
                 Debug.Log($"[指スマ] 指定：{calledNumber}（押したキー：{digit}）");
