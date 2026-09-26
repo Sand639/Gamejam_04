@@ -197,22 +197,39 @@ public class YubisumaMatch : MonoBehaviour
         yield return GameIntroRoutine();
     }
 
-    /// <summary>「プレイヤー1 1 - 0 プレイヤー2」の形のスコア。3人以上なら「名前 勝ち数」を並べる。</summary>
+    /// <summary>
+    /// 「プレイヤー1 ●○　　○○ プレイヤー2」の形のスコア。
+    /// 丸は先取するゲーム数だけ並べ、取ったゲームの数だけ左から ● にする。
+    /// 3人以上なら「名前 ●○」を並べる。
+    /// </summary>
     private string ScoreText()
     {
         if (players.Length == 2 && wins.Length == 2)
         {
-            return $"{players[0].DisplayName}  {wins[0]} - {wins[1]}  {players[1].DisplayName}";
+            return $"{players[0].DisplayName} {WinMarks(wins[0])}　　{WinMarks(wins[1])} {players[1].DisplayName}";
         }
 
         System.Text.StringBuilder builder = new System.Text.StringBuilder();
 
         for (int i = 0; i < players.Length && i < wins.Length; i++)
         {
-            builder.Append(i == 0 ? string.Empty : " ／ ").Append($"{players[i].DisplayName} {wins[i]}");
+            builder.Append(i == 0 ? string.Empty : " ／ ").Append($"{players[i].DisplayName} {WinMarks(wins[i])}");
         }
 
         return builder.ToString();
+    }
+
+    /// <summary>取ったゲームの数を丸で表す。2ゲーム先取で1ゲーム取っていれば「●○」。</summary>
+    private string WinMarks(int winCount)
+    {
+        System.Text.StringBuilder marks = new System.Text.StringBuilder();
+
+        for (int i = 0; i < winsToWinMatch; i++)
+        {
+            marks.Append(i < winCount ? '●' : '○');
+        }
+
+        return marks.ToString();
     }
 
     private void Update()
@@ -583,7 +600,7 @@ public class YubisumaMatch : MonoBehaviour
         if (wins.Length > 0 && phase != Phase.GameOver)
         {
             DrawShadowed(new Rect(0f, Screen.height - 170f * scale, Screen.width, 50f * scale),
-                $"{ScoreText()}（{winsToWinMatch}ゲーム先取）", turnStyle);
+                ScoreText(), turnStyle);
         }
 
         if (!string.IsNullOrEmpty(bigMessage))
