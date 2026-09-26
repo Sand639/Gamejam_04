@@ -44,6 +44,11 @@ public static class YubisumaSceneSetup
     /// <summary>握りこぶし⇔中指の切り替えにかける時間（秒）</summary>
     private const float SwitchSeconds = 0.08f;
 
+    /// <summary>音声の置き場所。「いっせーの.wav」と「0.wav」～「4.wav」</summary>
+    private const string AudioFolder = "Assets/Audio";
+    private const string IsseenoVoicePath = AudioFolder + "/いっせーの.wav";
+    private const int NumberVoiceCount = 5;
+
     /// <summary>2人の手をどれだけ離して置くか（互いのカメラに映り込まないように）</summary>
     private const float PlayerSpacing = 40f;
 
@@ -132,6 +137,22 @@ public static class YubisumaSceneSetup
         matchPlayers.arraySize = 2;
         matchPlayers.GetArrayElementAtIndex(0).objectReferenceValue = player1;
         matchPlayers.GetArrayElementAtIndex(1).objectReferenceValue = player2;
+
+        // 「いっせーの」と数字の声。画面に関係なく同じ大きさで聞こえるよう、2D の音にする
+        AudioSource voiceSource = matchObject.AddComponent<AudioSource>();
+        voiceSource.playOnAwake = false;
+        voiceSource.spatialBlend = 0f;
+        matchSerialized.FindProperty("voiceSource").objectReferenceValue = voiceSource;
+        matchSerialized.FindProperty("isseenoVoice").objectReferenceValue = LoadVoice(IsseenoVoicePath);
+
+        SerializedProperty numberVoices = matchSerialized.FindProperty("numberVoices");
+        numberVoices.arraySize = NumberVoiceCount;
+        for (int number = 0; number < NumberVoiceCount; number++)
+        {
+            numberVoices.GetArrayElementAtIndex(number).objectReferenceValue =
+                LoadVoice($"{AudioFolder}/{number}.wav");
+        }
+
         matchSerialized.ApplyModifiedPropertiesWithoutUndo();
 
         EditorSceneManager.SaveScene(scene, ScenePath);
@@ -222,6 +243,18 @@ public static class YubisumaSceneSetup
     // ------------------------------------------------------------
     // 補助
     // ------------------------------------------------------------
+
+    /// <summary>音声を読み込む。無ければ知らせて null を返す（声なしで動く）。</summary>
+    private static AudioClip LoadVoice(string path)
+    {
+        AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+        if (clip == null)
+        {
+            Debug.LogWarning($"音声 {path} が見つかりません。この声は鳴りません。");
+        }
+
+        return clip;
+    }
 
     /// <summary>
     /// 指スマ用の手のアニメーションを用意する。

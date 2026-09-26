@@ -50,6 +50,16 @@ public class YubisumaMatch : MonoBehaviour
     [Tooltip("手を下へ流すのにかける時間（秒）")]
     [SerializeField] private float scrollSeconds = 1.0f;
 
+    [Header("音声")]
+    [Tooltip("音声を鳴らす AudioSource。空なら、このオブジェクトに付いているものを使う")]
+    [SerializeField] private AudioSource voiceSource;
+
+    [Tooltip("「いっせーの」の声")]
+    [SerializeField] private AudioClip isseenoVoice;
+
+    [Tooltip("数字の声。0～4 の順に入れる（0番目が「0」）")]
+    [SerializeField] private AudioClip[] numberVoices = new AudioClip[MaxCall + 1];
+
     [Header("表示")]
     [Tooltip("文字の大きさ（1920×1080 のときの値。窓が小さいと自動で縮む）")]
     [Range(0.5f, 4f)]
@@ -75,6 +85,8 @@ public class YubisumaMatch : MonoBehaviour
 
     private IEnumerator Start()
     {
+        PrepareVoices();
+
         phase = Phase.Intro;
         bigMessage = "指スマスタート！";
 
@@ -129,6 +141,7 @@ public class YubisumaMatch : MonoBehaviour
 
         bigMessage = "いっせーの";
         subMessage = string.Empty;
+        PlayVoice(isseenoVoice);
 
         // 「いっせーの」の間は、全員の手を握りこぶしに戻す。
         // キーを押していても指は立たない（押しているかどうかは覚えておく）
@@ -138,6 +151,7 @@ public class YubisumaMatch : MonoBehaviour
 
         // 「せ！」の代わりに、番のプレイヤーが指定していた数字を出す（例：いっせーの 2！）
         bigMessage = $"いっせーの {calledNumber}！";
+        PlayVoice(calledNumber < numberVoices.Length ? numberVoices[calledNumber] : null);
 
         // ★この瞬間にキーを押している手だけ、一斉に指を立てる。結果を出している間はその形で止める
         ForEachPlayer(player => player.RevealHands());
@@ -181,6 +195,44 @@ public class YubisumaMatch : MonoBehaviour
         bigMessage = string.Empty;
         subMessage = string.Empty;
         phase = Phase.WaitingCall;
+    }
+
+    /// <summary>
+    /// 音声を先に読み込んでおく。
+    /// 鳴らす瞬間に読み込むと、**数字の声が指の立つ瞬間より遅れる**ことがあるため。
+    /// </summary>
+    private void PrepareVoices()
+    {
+        if (voiceSource == null)
+        {
+            voiceSource = GetComponent<AudioSource>();
+        }
+
+        if (isseenoVoice != null)
+        {
+            isseenoVoice.LoadAudioData();
+        }
+
+        foreach (AudioClip clip in numberVoices)
+        {
+            if (clip != null)
+            {
+                clip.LoadAudioData();
+            }
+        }
+    }
+
+    /// <summary>声を1つ鳴らす。前の声が残っていれば止めてから鳴らす（声が重ならないように）。</summary>
+    private void PlayVoice(AudioClip clip)
+    {
+        if (voiceSource == null || clip == null)
+        {
+            return;
+        }
+
+        voiceSource.Stop();
+        voiceSource.clip = clip;
+        voiceSource.Play();
     }
 
     private void ForEachPlayer(System.Action<YubisumaPlayer> action)
