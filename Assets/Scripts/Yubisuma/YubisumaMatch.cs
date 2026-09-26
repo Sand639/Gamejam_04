@@ -630,16 +630,38 @@ public class YubisumaMatch : MonoBehaviour
         }
     }
 
-    /// <summary>背景の色に負けないよう、黒い影を付けて描く。</summary>
+    /// <summary>
+    /// 背景の色に負けないよう、黒い影を付けて描く。
+    ///
+    /// ## 文字が二重に見えていた不具合（2026/9/26 修正）
+    ///
+    /// 文字の色は「マウスが乗っていないとき（normal）」と「乗っているとき（hover）」で別々に持っている。
+    /// 前は normal だけを黒にして影を描いていたため、**マウスが乗ると影が白っぽい色で描かれ**、
+    /// 白い文字が2つずれて重なって二重に見えていた（「○」が「◎」に見えた）。
+    /// そのため、**どの状態の色もそろえて**から描く。
+    /// </summary>
     private static void DrawShadowed(Rect rect, string text, GUIStyle style)
     {
         Color saved = style.normal.textColor;
 
-        style.normal.textColor = new Color(0f, 0f, 0f, 0.8f);
+        SetTextColor(style, new Color(0f, 0f, 0f, 0.8f));
         GUI.Label(new Rect(rect.x + 3f, rect.y + 3f, rect.width, rect.height), text, style);
 
-        style.normal.textColor = saved;
+        SetTextColor(style, saved);
         GUI.Label(rect, text, style);
+    }
+
+    /// <summary>マウスが乗っているときなども含めて、文字の色をすべて同じにする。</summary>
+    public static void SetTextColor(GUIStyle style, Color color)
+    {
+        style.normal.textColor = color;
+        style.hover.textColor = color;
+        style.active.textColor = color;
+        style.focused.textColor = color;
+        style.onNormal.textColor = color;
+        style.onHover.textColor = color;
+        style.onActive.textColor = color;
+        style.onFocused.textColor = color;
     }
 
     private void EnsureStyles()
@@ -650,12 +672,12 @@ public class YubisumaMatch : MonoBehaviour
         }
 
         bigStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
-        bigStyle.normal.textColor = Color.white;
+        SetTextColor(bigStyle, Color.white);
 
         subStyle = new GUIStyle(bigStyle) { alignment = TextAnchor.UpperCenter };
-        subStyle.normal.textColor = new Color(1f, 0.9f, 0.3f);
+        SetTextColor(subStyle, new Color(1f, 0.9f, 0.3f));
 
         turnStyle = new GUIStyle(bigStyle) { fontStyle = FontStyle.Normal };
-        turnStyle.normal.textColor = Color.white;
+        SetTextColor(turnStyle, Color.white);
     }
 }
