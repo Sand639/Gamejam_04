@@ -68,6 +68,16 @@ public static class NetworkTestBuilder
                 "手順：Documents/インターネットでの複数人プレイ.md");
         }
 
+        // 窓の端をドラッグして大きさを変えられるようにする。
+        // 初期設定ではOFFで、複数並べたときに大きさを変えられなかったため。
+        // （Player Settings に残るので、ふつうのビルドでも変えられるようになる）
+        if (!PlayerSettings.resizableWindow)
+        {
+            PlayerSettings.resizableWindow = true;
+            AssetDatabase.SaveAssets();
+            Debug.Log("Player Settings の Resizable Window を ON にしました（窓の大きさを変えられるようにするため）。");
+        }
+
         BuildPlayerOptions options = new BuildPlayerOptions
         {
             scenes = new[] { NetworkConnectSceneSetup.ScenePath },
